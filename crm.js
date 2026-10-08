@@ -251,8 +251,10 @@ async function boot() {
   document.querySelector(".brand b").textContent = "ღიმილი";
   document.querySelector(".avatar").classList.add("hidden");
   document.querySelector(".nav").classList.add("hidden");
+  const splashSafetyTimer = setTimeout(() => $("splash")?.classList.add("done"), 4500);
   try {
     await loadData();
+    $("splash")?.classList.add("done");
     if (!sourceRows.length || !data.clubs.some(item => item.id === 'user-activity-drawing')) {
       try {
         const result = await api('/api/import', { method:'POST', body:'{}' });
@@ -276,6 +278,7 @@ async function boot() {
     }
     translateUi($("view"));
   }
+  clearTimeout(splashSafetyTimer);
   $("splash")?.classList.add("done");
 }
 
