@@ -3,7 +3,9 @@ const sections = ["children", "staff", "leads", "payments", "expenses", "tasks",
 let data = Object.fromEntries(sections.map(key => [key, []]));
 let sourceRows = [];
 let signedInUser = null;
-let current = "children";
+let current = "dashboard";
+let staffTab = "teachers";
+let showAllToday = false;
 let period = "month";
 let customPeriod = null;
 let currentChildId = null;
@@ -224,42 +226,6 @@ function renderShell() {
   if (!modalOpen) go(current);
 }
 
-async function ensureBillingCatalog() {
-  const catalog = [
-    { match:item=>/მინი-ბაღი.*10:00.*14:00|мини-сад.*10:00.*14:00/i.test(item.name||''), name:'მინი-ბაღი · 10:00–14:00', audience:'მინი-ბაღი', billingType:'monthly', tariff:350, lessonRate:null, weekdays:[1,2,3,4,5], timeSlots:['10:00–14:00'], schedule:'ორშ–პარ · 10:00–14:00', teacherPayType:'', teacherPercent:null, teacherRate:null },
-    { match:item=>/მინი-ბაღი.*10:00.*16:00|мини-сад.*10:00.*16:00/i.test(item.name||''), name:'მინი-ბაღი · 10:00–16:00', audience:'მინი-ბაღი', billingType:'monthly', tariff:450, lessonRate:null, weekdays:[1,2,3,4,5], timeSlots:['10:00–16:00'], schedule:'ორშ–პარ · 10:00–16:00', teacherPayType:'', teacherPercent:null, teacherRate:null },
-    { match:item=>/субботн.*(грузин|сад)|შაბათ.*(ქართულ|ბაღ)/i.test(item.name||''), name:'შაბათის ბაღი', audience:'საბავშვო პროგრამა', billingType:'per_lesson', tariff:null, lessonRate:40, weekdays:[6], timeSlots:['11:00–15:00'], schedule:'შაბათი · 11:00–15:00', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>item.id==='sheet-activity-georgian'||/წინასასკოლო მომზადება|подготовк.*школ/i.test(item.name||''), name:'წინასასკოლო მომზადება · ქართული სექტორი', audience:'ქართული სექტორი', billingType:'monthly', tariff:200, lessonRate:null, weekdays:[1,3,5], timeSlots:['16:30–18:00'], schedule:'ორშ / ოთხ / პარ · 16:30–18:00', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>/განვითარება 4.?5|ზოგადი განვითარება|развивашка|общее развитие/i.test(item.name||''), name:'განვითარება 4–5 წლის', audience:'4–5 წლის', billingType:'monthly', tariff:150, lessonRate:null, weekdays:[2,4], timeSlots:['16:30–17:30'], schedule:'სამ / ხუთ · 16:30–17:30', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>item.id==='sheet-activity-english'||/английский клуб|english club|ინგლისური კლუბ/i.test(item.name||''), name:'ინგლისური კლუბი 4+', audience:'4+ წლის', billingType:'flexible', tariff:200, lessonRate:60, weekdays:[6], timeSlots:['11:00–15:00'], schedule:'შაბათი · 11:00–15:00', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>/ინგლისურის გაკვეთილები|ინგლისური ენა|уроки английского|английский язык/i.test(item.name||''), name:'ინგლისური ენა', audience:'ბავშვები', billingType:'monthly', tariff:100, lessonRate:null, weekdays:[6], timeSlots:['11:00'], schedule:'შაბათი · 11:00', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>/მენტალური არითმეტიკა|ментальн.*арифмет/i.test(item.name||''), name:'მენტალური არითმეტიკა', audience:'ბავშვები', billingType:'monthly', tariff:150, lessonRate:null, weekdays:[6], timeSlots:['11:00','12:00','13:00'], schedule:'შაბათი · 11:00 / 12:00 / 13:00', teacherPayType:'percent', teacherPercent:50, teacherRate:null },
-    { match:item=>/ლოგოპედის კონსულტაცია|ეკას კონსულტაცია|консультац.*(логопед|эк)/i.test(item.name||''), name:'ლოგოპედის კონსულტაცია', audience:'წინასწარი ჩაწერით', billingType:'per_lesson', tariff:null, lessonRate:100, weekdays:[], timeSlots:[], schedule:'წინასწარი ჩაწერით', appointmentOnly:true, teacherPayType:'per_lesson', teacherAccrualBasis:'attendance', teacherRate:50, teacherPercent:null },
-    { match:item=>/ლოგოპედის გაკვეთილი|მეტყველების თერაპევტი|речев.*терапевт|логопед.*урок/i.test(item.name||''), name:'ლოგოპედის გაკვეთილი', audience:'წინასწარი ჩაწერით', billingType:'per_lesson', tariff:null, lessonRate:40, weekdays:[], timeSlots:[], schedule:'წინასწარი ჩაწერით', appointmentOnly:true, teacherPayType:'per_lesson', teacherAccrualBasis:'attendance', teacherRate:25, teacherPercent:null },
-    { match:item=>/ლოგოპედი და ქცევა|მეტყველება.*ქცევის თერაპია|речев.*поведен/i.test(item.name||''), name:'ლოგოპედი და ქცევა', audience:'წინასწარი ჩაწერით', billingType:'per_lesson', tariff:null, lessonRate:50, weekdays:[], timeSlots:[], schedule:'წინასწარი ჩაწერით', appointmentOnly:true, teacherPayType:'per_lesson', teacherAccrualBasis:'attendance', teacherRate:30, teacherPercent:null },
-    { match:item=>/ტომატის|томатис/i.test(item.name||''), name:'ტომატისი', audience:'წინასწარი ჩაწერით', billingType:'per_lesson', tariff:null, lessonRate:null, weekdays:[], timeSlots:[], schedule:'წინასწარი ჩაწერით', appointmentOnly:true, teacherPayType:'', teacherPercent:null, teacherRate:null },
-  ];
-  let changed=false;
-  const craft=data.clubs.find(isCraftCircle);
-  if (craft && craft.billingCatalogVersion !== 5) {
-    await dataAdapter.update('clubs',craft.id,{name:'კრაფტი',audience:'ბაღის და გარე ბავშვები',billingType:'per_lesson',tariff:null,lessonRate:null,kindergartenRate:30,externalRate:40,weekdays:[4],timeSlots:['14:00','16:00'],schedule:'ხუთშაბათი · 14:00 / 16:00',teacherPayType:'percent',teacherPercent:50,teacherRate:null,billingCatalogVersion:5});
-    changed=true;
-  }
-  for (const entry of catalog) {
-    const matches=data.clubs.filter(entry.match);
-    const existing=matches.find(item=>item.billingCatalogVersion===5)||matches[0];
-    const {match,...record}=entry;
-    if (!existing) {
-      await dataAdapter.create('clubs',{...record,teacherId:'',teacher:'',importSource:'Добавлено по запросу',billingCatalogVersion:5});
-      changed=true;
-    } else if (existing.billingCatalogVersion !== 5) {
-      await dataAdapter.update('clubs',existing.id,{...record,billingCatalogVersion:5});
-      changed=true;
-    }
-  }
-  if (changed) { renderDrawer(); go(current); }
-}
-
 async function boot() {
   $("role").textContent = "ცენტრის CRM";
   document.querySelector(".brand b").textContent = "ღიმილი";
@@ -272,8 +238,6 @@ async function boot() {
   try {
     await loadData();
     $("splash")?.classList.add("done");
-    try { await ensureBillingCatalog(); }
-    catch (error) { toast('ტარიფების კატალოგის განახლება ვერ მოხერხდა'); }
   }
   catch (error) {
     if (error.status === 401) { try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem('gimili_crm_session'); } catch (_) {} location.replace('./login.html'); return; }
@@ -373,18 +337,19 @@ function go(view) {
   if (!signedInUser) return;
   current = view;
   toggleDrawer(false);
-  const primaryViews = new Set(['children','payments','expenses']);
+  const primaryViews = new Set(['dashboard','children','payments']);
   document.querySelectorAll(".nav button[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === view || (view === 'childProfile' && button.dataset.view === 'children')));
   const more = document.querySelector('.nav button[data-nav="more"]');
   if (more) more.classList.toggle('active', !primaryViews.has(view) && view !== 'childProfile');
   $("view").innerHTML = (views[view] || views.dashboard)();
   translateUi($("view"));
+  renderDrawer();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function head(title, subtitle, action = "") {
-  const addLivesInBottomBar = ['children', 'payments', 'expenses'].includes(current);
-  return `<div class="page-head"><div><div class="eyebrow">${esc(subtitle)}</div><h1>${esc(title)}</h1></div>${addLivesInBottomBar ? '' : action}</div>`;
+  const addLivesInBottomBar = ['children', 'payments', 'dashboard'].includes(current);
+  return `<div class="page-head"><div><div class="eyebrow">${esc(subtitle)}</div><h1>${esc(title)}</h1></div>${action ? `<div class="head-action ${addLivesInBottomBar ? 'desktop-only' : ''}">${action}</div>` : ''}</div>`;
 }
 const empty = (message, action = "") => `<div class="empty card">${esc(message)}${action ? `<div style="margin-top:14px">${action}</div>` : ""}</div>`;
 const button = (label, call) => `<button class="btn small" onclick="${call}">${esc(label)}</button>`;
@@ -454,6 +419,29 @@ function teacherRuleLabel(subject,person=get('staff',subject.teacherId)||{}) {
   if (type==='percent') return `მასწავლებელს: ${number(subject.teacherPercent==null||subject.teacherPercent===''?person.revenueShare:subject.teacherPercent)}% მიღებული თანხიდან`;
   return `მასწავლებელს: ${money(subject.teacherRate==null||subject.teacherRate===''?person.lessonRate:subject.teacherRate)} / ჩატარებული გაკვეთილი`;
 }
+const personnelRole = /ბუღალტერ|დიასახლის|დამლაგ|დაცვ|მზარეულ|ადმინისტრატ|ძიძა|бухгалт|уборщ|охран|повар|администр|няня/i;
+const isPersonnel = person => person?.staffType ? person.staffType === 'staff' : personnelRole.test(String(person?.role || ''));
+const teacherStaff = (rows = data.staff) => rows.filter(person => !isPersonnel(person));
+const personnelStaff = (rows = data.staff) => rows.filter(isPersonnel);
+function personAccrued(person, match, months) {
+  const fixed = isPersonnel(person) || (person.payType === 'fixed' && !data.clubs.some(subject => subject.teacherId === person.id && subject.teacherPayType));
+  if (fixed) return isActiveRecord(person,'staff') ? number(person.monthlySalary) * months : 0;
+  return data.clubs.filter(subject => subject.teacherId === person.id).reduce((sum,subject) => sum + subjectTeacherAccrual(subject,person,match,match), 0);
+}
+const isSalaryExpense = item => expenseCategoryLabel(item.category) === 'ხელფასები';
+const salaryExpenseFor = (person, item) => isSalaryExpense(item) && (item.staffId === person.id || (!item.staffId && person.name && String(item.title || '').includes(person.name)));
+function payroll(match, months) {
+  const salaryExpenses = data.expenses.filter(item => isSalaryExpense(item) && match(item));
+  const used = new Set();
+  const rows = data.staff.map(person => {
+    const own = salaryExpenses.filter(item => salaryExpenseFor(person, item)); own.forEach(item => used.add(item.id));
+    const paid = own.reduce((sum,item) => sum + number(item.amount), 0), accrued = personAccrued(person, match, months);
+    return { person, accrued, paid, cost: paid > 0 ? paid : accrued, due: Math.max(0, accrued - paid) };
+  });
+  const unassigned = salaryExpenses.filter(item => !used.has(item.id)).reduce((sum,item) => sum + number(item.amount), 0);
+  return { rows, unassigned, total: rows.reduce((sum,row) => sum + row.cost, 0) + unassigned,
+    accrued: rows.reduce((sum,row) => sum + row.accrued, 0), paid: rows.reduce((sum,row) => sum + row.paid, 0) + unassigned };
+}
 function teacherFinance(person) {
   const subjects = data.clubs.filter(subject => subject.teacherId === person.id);
   const subjectIds = new Set(subjects.map(subject => subject.id));
@@ -462,42 +450,30 @@ function teacherFinance(person) {
   const attendanceBased=new Set(subjects.filter(subject=>subject.teacherAccrualBasis==='attendance').map(subject=>subject.id));
   const lessons = subjects.filter(subject=>!attendanceBased.has(subject.id)).reduce((sum,subject)=>sum+heldLessonDates(subject.id,item=>inPeriod(item.date)),0);
   const attendedLessons=data.attendance.filter(item=>attendanceBased.has(item.subjectId)&&wasPresent(item)&&inPeriod(item.date));
-  let accrued = 0;
-  if (person.payType === 'fixed' && !subjects.some(subject=>subject.teacherPayType)) accrued = number(person.monthlySalary) * periodMonthCount();
-  else accrued = subjects.reduce((sum,subject)=>sum+subjectTeacherAccrual(subject,person,item=>inPeriod(item.date),item=>inPeriod(item.date)),0);
+  const accrued = personAccrued(person, item => inPeriod(item.date), periodMonthCount());
   return {subjects, revenue, lessons:lessons+attendedLessons.length, accrued};
 }
 function accountingTotals() {
   const income = data.payments.filter(item => inPeriod(item.date)).reduce((sum,item) => sum+number(item.amount),0);
   const periodExpenses = data.expenses.filter(item => inPeriod(item.date));
-  const paidSalaries = periodExpenses.filter(item => expenseCategoryLabel(item.category) === 'ხელფასები').reduce((sum,item) => sum+number(item.amount),0);
-  const otherExpenses = periodExpenses.filter(item => expenseCategoryLabel(item.category) !== 'ხელფასები').reduce((sum,item) => sum+number(item.amount),0);
-  const teachers = data.staff.map(person => ({person,...teacherFinance(person)}));
-  const accruedSalaries = teachers.reduce((sum,item) => sum+item.accrued,0);
-  const salaries = paidSalaries > 0 ? paidSalaries : accruedSalaries;
+  const otherExpenses = periodExpenses.filter(item => !isSalaryExpense(item)).reduce((sum,item) => sum+number(item.amount),0);
+  const teachers = teacherStaff().map(person => ({person,...teacherFinance(person)}));
+  const pay = payroll(item => inPeriod(item.date), periodMonthCount());
+  const paidSalaries = pay.paid, accruedSalaries = pay.accrued, salaries = pay.total;
   const debt = billingRows(todayMonth()).reduce((sum,row) => sum + number(row.remaining),0);
-  return {income,otherExpenses,teachers,salaries,accruedSalaries,paidSalaries,totalExpenses:otherExpenses+salaries,centerShare:income-salaries,profit:income-otherExpenses-salaries,debt};
+  return {income,otherExpenses,teachers,pay,salaries,accruedSalaries,paidSalaries,totalExpenses:otherExpenses+salaries,centerShare:income-salaries,profit:income-otherExpenses-salaries,debt};
 }
-function teacherSalariesForMonth(key) {
-  return data.staff.reduce((total,person) => {
-    const subjects=data.clubs.filter(subject=>subject.teacherId===person.id); const ids=new Set(subjects.map(subject=>subject.id));
-    if (person.payType==='fixed'&&!subjects.some(subject=>subject.teacherPayType)) return total+number(person.monthlySalary);
-    return total+subjects.reduce((sum,subject)=>sum+subjectTeacherAccrual(subject,person,item=>monthKey(item.date)===key,item=>monthKey(item.date)===key),0);
-  },0);
-}
-function payrollCostForMonth(key) {
-  const paid=data.expenses.filter(item=>monthKey(item.date)===key&&expenseCategoryLabel(item.category)==='ხელფასები').reduce((sum,item)=>sum+number(item.amount),0);
-  return paid>0?paid:teacherSalariesForMonth(key);
-}
+function payrollCostForMonth(key) { return payroll(item => monthKey(item.date) === key, 1).total; }
 function nonSalaryExpensesForMonth(key) {
   return data.expenses.filter(item=>monthKey(item.date)===key&&expenseCategoryLabel(item.category)!=='ხელფასები').reduce((sum,item)=>sum+number(item.amount),0);
 }
 
 function accounting() {
   const totals = accountingTotals();
-  const salaryMode = totals.paidSalaries > 0 ? 'ფაქტობრივად გაცემული ხელფასი' : 'ავტომატურად დარიცხული ხელფასი';
+  const salaryMode = `დარიცხული ${money(totals.accruedSalaries)} · გაცემული ${money(totals.paidSalaries)}`;
+  const personnel = totals.pay.rows.filter(row => isPersonnel(row.person));
   const mode = person => person.payType === 'fixed' ? `ფიქსირებული · ${money(person.monthlySalary)} / თვე` : person.payType === 'percent' ? `შემოსავლის ${number(person.revenueShare)}%` : `${money(person.lessonRate)} / ჩატარებული გაკვეთილი`;
-  return `${head('ბუღალტერია','შემოსავალი, ხელფასები და წმინდა მოგება','<button class="btn small" onclick="paymentForm()">＋ გადახდა</button>')}${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--green)"><span class="label">შემოსავალი</span><strong>${money(totals.income)}</strong><span class="delta">კასაში მიღებული გადახდები</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">ხელფასები</span><strong>${money(totals.salaries)}</strong><span class="delta">${salaryMode}</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">სხვა ხარჯები</span><strong>${money(totals.otherExpenses)}</strong><span class="delta">კომუნალური, ქირა და სხვა</span></div><div class="metric" style="--accent:var(--blue)"><span class="label">კასა / წმინდა ნაშთი</span><strong>${money(totals.profit)}</strong><span class="delta">ყველა ხარჯის შემდეგ</span></div></section><section class="section card"><div class="section-title"><h2>თანხების განაწილება</h2></div><div class="finance"><div><small>დიანა / ცენტრი ხელფასების შემდეგ</small><strong>${money(totals.centerShare)}</strong></div><div><small>სრული ხარჯი</small><strong>${money(totals.totalExpenses)}</strong></div><div class="profit"><small>კასის წმინდა ნაშთი</small><strong>${money(totals.profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ფორმულა: კასაში მიღებული თანხა − ხელფასი − კომუნალური და სხვა ხარჯები. თუ „ხელფასები“ კატეგორიაში ფაქტობრივი გაცემა არსებობს, სისტემა მას იყენებს და დარიცხვას მეორედ აღარ აკლებს. მიმდინარე თვის დავალიანება: <b>${money(totals.debt)}</b>.</p>${totals.paidSalaries>0?`<p class="accounting-note">დარიცხული იყო ${money(totals.accruedSalaries)}, ფაქტობრივად გაცემულია ${money(totals.paidSalaries)}.</p>`:''}</section><section class="section"><div class="section-title"><h2>მასწავლებლების დარიცხვა</h2><button class="btn small secondary" onclick="go('staff')">პარამეტრები →</button></div>${totals.teachers.length ? `<div class="list">${totals.teachers.map(item => `<article class="teacher-card card"><div class="teacher-top"><div class="pic" style="--accent:var(--pink)">${esc((item.person.name||'?').slice(0,1))}</div><div><h2>${esc(item.person.name)}</h2><p class="meta">${esc(mode(item.person))}</p></div><b>${money(item.accrued)}</b></div><div class="profile-details" style="margin-top:12px"><div><small>ჩატარებული გაკვეთილები</small><b>${item.lessons}</b></div><div><small>საგნებიდან მიღებული თანხა</small><b>${money(item.revenue)}</b></div></div></article>`).join('')}</div>` : empty('დაამატეთ მასწავლებლები და მიუთითეთ ანაზღაურების წესი')}</section>`;
+  return `${head('ბუღალტერია','შემოსავალი, ხელფასები და წმინდა მოგება','<button class="btn small" onclick="paymentForm()">＋ გადახდა</button>')}${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--green)"><span class="label">შემოსავალი</span><strong>${money(totals.income)}</strong><span class="delta">კასაში მიღებული გადახდები</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">ხელფასები</span><strong>${money(totals.salaries)}</strong><span class="delta">${salaryMode}</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">სხვა ხარჯები</span><strong>${money(totals.otherExpenses)}</strong><span class="delta">კომუნალური, ქირა და სხვა</span></div><div class="metric" style="--accent:var(--blue)"><span class="label">კასა / წმინდა ნაშთი</span><strong>${money(totals.profit)}</strong><span class="delta">ყველა ხარჯის შემდეგ</span></div></section><section class="section card"><div class="section-title"><h2>თანხების განაწილება</h2></div><div class="finance"><div><small>დიანა / ცენტრი ხელფასების შემდეგ</small><strong>${money(totals.centerShare)}</strong></div><div><small>სრული ხარჯი</small><strong>${money(totals.totalExpenses)}</strong></div><div class="profit"><small>კასის წმინდა ნაშთი</small><strong>${money(totals.profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ფორმულა: კასაში მიღებული თანხა − ხელფასები − სხვა ხარჯები. თითოეულ თანამშრომელზე: თუ ხელფასი უკვე გაცემულია, ითვლება გაცემული თანხა, თუ არა — დარიცხული. მიმდინარე თვის დავალიანება: <b>${money(totals.debt)}</b>.</p></section><section class="section"><div class="section-title"><h2>პერსონალი</h2><button class="btn small secondary" onclick="staffTab='personnel';go('staff')">პარამეტრები →</button></div>${personnel.length?`<div class="list">${personnel.map(row=>`<article class="teacher-card card"><div class="teacher-top"><div class="pic" style="--accent:var(--yellow)">${esc((row.person.name||'?').slice(0,1))}</div><div><h2>${esc(row.person.name)}</h2><p class="meta">${esc(row.person.role||'პერსონალი')} · ${money(row.person.monthlySalary)} / თვე</p></div><b>${money(row.cost)}</b></div><div class="profile-details" style="margin-top:12px"><div><small>დარიცხული</small><b>${money(row.accrued)}</b></div><div><small>გაცემული</small><b>${money(row.paid)}</b></div></div></article>`).join('')}</div>`:empty('პერსონალი ჯერ არ არის დამატებული')}</section><section class="section"><div class="section-title"><h2>მასწავლებლების დარიცხვა</h2><button class="btn small secondary" onclick="go('staff')">პარამეტრები →</button></div>${totals.teachers.length ? `<div class="list">${totals.teachers.map(item => `<article class="teacher-card card"><div class="teacher-top"><div class="pic" style="--accent:var(--pink)">${esc((item.person.name||'?').slice(0,1))}</div><div><h2>${esc(item.person.name)}</h2><p class="meta">${esc(mode(item.person))}</p></div><b>${money(item.accrued)}</b></div><div class="profile-details" style="margin-top:12px"><div><small>ჩატარებული გაკვეთილები</small><b>${item.lessons}</b></div><div><small>საგნებიდან მიღებული თანხა</small><b>${money(item.revenue)}</b></div></div></article>`).join('')}</div>` : empty('დაამატეთ მასწავლებლები და მიუთითეთ ანაზღაურების წესი')}</section>`;
 }
 
 function dashboard() {
@@ -513,7 +489,7 @@ function dashboard() {
   const invalidTransactionDates=[...data.payments,...data.expenses].filter(item=>item.date&&!dateKey(item.date)).length;
   const currentMonth=todayMonth();
   const oneOffToday=new Map();
-  data.attendance.filter(item=>item.date===today()&&wasPresent(item)).forEach(item=>{
+  data.attendance.filter(item=>dateKey(item.date)===today()&&wasPresent(item)).forEach(item=>{
     const child=get('children',item.childId),subject=get('clubs',item.subjectId);
     if (!child||!subject||!isPerLessonCircle(subject,child)) return;
     if (!oneOffToday.has(child.id)) oneOffToday.set(child.id,new Set());
@@ -528,8 +504,14 @@ function dashboard() {
     const complete=!unknownPrice&&rows.every(row=>paidStatus(row.status));
     return {child,rows,monthly,remaining,unknownPrice,noAccrual,complete,dueDate,overdue:regularDue&&dueDate<today(),oneOff:oneOffToday.has(child.id),nextDate:regularDue?billingDate(child,complete?shiftMonth(currentMonth,1):currentMonth):today()};
   }).filter(item=>!item.complete||item.dueDate===today()||item.oneOff).sort((a,b)=>Number(a.complete)-Number(b.complete)||String(a.dueDate).localeCompare(String(b.dueDate)));
-  const todayBlock=`<section class="section today-card"><div class="section-title"><div><h2>დღეს და ვადაგადაცილებული</h2><p class="meta">${todayPayments.filter(item=>!item.complete).length} გადასახდელი · ${todayPayments.filter(item=>item.overdue&&!item.complete).length} ვადაგადაცილებული</p></div><button class="btn small secondary" onclick="go('payments')">ყველა →</button></div>${todayPayments.length?`<div class="today-list">${todayPayments.map(item=>`<button class="today-payment ${item.complete?'paid':'due'} ${item.overdue&&!item.complete?'overdue':''}" onclick="showChild('${esc(item.child.id)}')"><span class="today-status">${item.complete?'✓':item.overdue?'!':'₾'}</span><span class="today-copy"><b>${esc(item.child.name)}</b><small>${item.rows.map(row=>esc(row.subject?.name||'საერთო ტარიფი')).join(' · ')||'ტარიფი მითითებული არ არის'}</small><em>${item.noAccrual?'ამ თვეში დასწრებული გაკვეთილი არ არის':item.complete?(item.oneOff?'დღევანდელი ერთჯერადი გადახდილია':`შემდეგი გადახდა: ${item.nextDate} · ${money(item.monthly)}`):item.unknownPrice?'ტარიფი დასაზუსტებელია':item.oneOff?`დღევანდელი გაკვეთილი · დარჩენილია ${money(item.remaining)}`:item.overdue?`ვადა იყო ${item.dueDate} · დარჩენილია ${money(item.remaining)}`:`დღეს · დარჩენილია ${money(item.remaining)}`}</em></span><strong>${item.noAccrual?'დარიცხვა 0':item.complete?'გადახდილია':item.unknownPrice?'ფასი ?':money(item.remaining)}</strong></button>`).join('')}</div>`:`<div class="today-empty"><span>✓</span><div><b>დღეს და წარსულში დაუფარავი გადახდა არ არის</b><small>შემდეგი გადახდის დღეები კალენდარში ჩანს.</small></div></div>`}</section>`;
-  return `${head('მთავარი', `გამარჯობა, ${signedInUser?.name || 'დიანა'}`)}${todayBlock}${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--blue)"><span class="label">აქტიური ბავშვები</span><strong>${active}</strong><span class="delta">ახალი ამ პერიოდში: ${newChildren}</span></div><div class="metric" style="--accent:var(--green)"><span class="label">აქტიური თანამშრომლები</span><strong>${activePeople('staff').length}</strong><span class="delta">სულ ბაზაში: ${data.staff.length}</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">თვიური ტარიფები</span><strong>${money(due)}</strong><span class="delta">გადასახდელი თანხა</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">მიღებული თანხა</span><strong>${money(income)}</strong><span class="delta">ფაქტობრივი გადახდები</span></div></section><div class="dashboard-grid"><section class="section card"><div class="section-title"><h2>ფინანსები</h2><button class="btn small secondary" onclick="go('accounting')">ბუღალტერია →</button></div><div class="finance"><div><small>შემოსავალი</small><strong>${money(income)}</strong></div><div><small>ხარჯები</small><strong>${money(expenses)}</strong></div><div class="profit"><small>წმინდა მოგება</small><strong>${money(profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ხელფასის ხარჯი: <b>${money(salaries)}</b>. ფაქტობრივი გაცემა პრიორიტეტულია; თუ ის ჯერ არ არის შეტანილი, გამოიყენება ავტომატური დარიცხვა.</p></section><section class="section card"><div class="section-title"><div><h2>სისტემის კონტროლი</h2><p class="meta">რა არის შესავსები ან გასაწმენდი</p></div></div><div class="quality-list"><button onclick="go('contacts')"><span>☎</span><b>ტელეფონის გარეშე</b><strong>${currentChildren.filter(c => !c.phone && !c.phone2).length}</strong></button><button onclick="go('payments')"><span>◷</span><b>გადახდის დღის გარეშე</b><strong>${unknownDays}</strong></button><button onclick="go('clubs')"><span>♙</span><b>მასწავლებლის გარეშე</b><strong>${circlesWithoutTeacher}</strong></button><button onclick="go('clubs')"><span>⌁</span><b>ძველი გამოუყენებელი წრეები</b><strong>${unusedLegacyCircles}</strong></button>${invalidTransactionDates?`<button onclick="go('accounting')"><span>!</span><b>არასწორი თარიღი</b><strong>${invalidTransactionDates}</strong></button>`:''}</div></section></div>`;
+  const openCount=todayPayments.filter(item=>!item.complete).length, overdueCount=todayPayments.filter(item=>item.overdue&&!item.complete).length;
+  const todayItem=item=>`<article class="today-payment ${item.complete?'paid':'due'} ${item.overdue&&!item.complete?'overdue':''}"><span class="today-status">${item.complete?'✓':item.overdue?'!':'₾'}</span><button class="today-copy" onclick="showChild('${esc(item.child.id)}')"><b>${esc(item.child.name)}</b><small>${item.rows.map(row=>esc(row.subject?.name||'საერთო ტარიფი')).join(' · ')||'ტარიფი მითითებული არ არის'}</small><em>${item.noAccrual?'ამ თვეში დასწრებული გაკვეთილი არ არის':item.complete?(item.oneOff?'დღევანდელი ერთჯერადი გადახდილია':`შემდეგი: ${item.nextDate} · ${money(item.monthly)}`):item.unknownPrice?'ფასი დასაზუსტებელია':item.oneOff?'დღევანდელი გაკვეთილი':item.overdue?`ვადა იყო ${item.dueDate}`:'გადახდის დღე დღესაა'}</em></button><strong>${item.noAccrual?'0':item.complete?'✓':item.unknownPrice?'?':money(item.remaining)}</strong>${!item.complete&&!item.unknownPrice&&item.remaining>0?`<button class="btn small pay-now" onclick="quickPayChild('${esc(item.child.id)}')" aria-label="გადახდილია">✓ გადაიხადა</button>`:''}</article>`;
+  const todayBlock=`<section class="section today-card"><div class="section-title"><div><h2>დღევანდელი გადახდები</h2><p class="meta">${openCount?`${openCount} გადასახდელი${overdueCount?` · <b class="danger-text">${overdueCount} ვადაგადაცილებული</b>`:''}`:'ყველაფერი გადახდილია'}</p></div><button class="btn small secondary" onclick="go('payments')">ყველა →</button></div>${todayPayments.length?`<div class="today-list ${todayPayments.length>5&&!showAllToday?'collapsed':''}">${todayPayments.map(todayItem).join('')}</div>${todayPayments.length>5?`<button class="btn small secondary show-more" onclick="showAllToday=!showAllToday;go('dashboard')">${showAllToday?'ნაკლების ჩვენება':`ყველას ჩვენება · ${todayPayments.length}`}</button>`:''}`:`<div class="today-empty"><span>✓</span><div><b>დღეს გადასახდელი არავინაა</b><small>მომდევნო გადახდები ქვემოთ, დღეების ზოლზე ჩანს.</small></div></div>`}</section>`;
+  const days=Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;const month=key.slice(0,7);const dueKids=currentChildren.filter(c=>day(c.paymentDay)&&billingDate(c,month)===key&&billingRows(month).some(row=>row.child.id===c.id&&!paidStatus(row.status)));return {key,d,dues:dueKids.length,lessons:calendarEventsForDate(key).length}});
+  const weekStrip=`<section class="section card week-card"><div class="section-title"><div><h2>უახლოესი დღეები</h2><p class="meta">₾ — გადახდის დღე · ● — გაკვეთილები</p></div><button class="btn small secondary" onclick="go('schedule')">კალენდარი →</button></div><div class="week-strip">${days.map((x,i)=>`<button class="week-day ${i===0?'today':''} ${x.dues?'has-due':''}" onclick="calendarMonth='${x.key.slice(0,7)}';calendarSelected='${x.key}';go('schedule')"><small>${x.d.toLocaleDateString('ka-GE',{weekday:'short'})}</small><b>${x.d.getDate()}</b>${x.dues?`<span class="due-count">₾ ${x.dues}</span>`:'<span class="due-count empty">·</span>'}${x.lessons?`<i>● ${x.lessons}</i>`:'<i>&nbsp;</i>'}</button>`).join('')}</div></section>`;
+  const todayLessons=calendarEventsForDate(today());
+  const lessonsBlock=`<section class="section card"><div class="section-title"><div><h2>დღევანდელი გაკვეთილები</h2><p class="meta">${todayLessons.length?`${todayLessons.length} გაკვეთილი`:'დღეს გაკვეთილები არ არის'}</p></div></div>${todayLessons.length?`<div class="list">${todayLessons.map(item=>{const marked=data.attendance.filter(a=>a.subjectId===item.subjectId&&dateKey(a.date)===today()&&wasPresent(a)).length;const members=activePeople('children').filter(c=>toList(c.activityIds).includes(item.subjectId)).length;return `<button class="row clickable lesson-row" onclick="groupAttendanceForm('${esc(item.subjectId)}','${today()}')"><div class="due-day calendar-time">${esc(item.time||'•')}</div><div class="row-body"><div class="row-title">${esc(subjectName(item.subjectId))}</div><div class="meta">${esc(teacherName(get('clubs',item.subjectId)||{}))} · დასწრება ${marked} / ${members}</div></div><span class="badge ${marked?'':'warn'}">${marked?'მონიშნულია':'მონიშვნა'}</span></button>`}).join('')}</div>`:''}</section>`;
+  return `${head('მთავარი', `${new Date().toLocaleDateString('ka-GE',{weekday:'long',day:'numeric',month:'long'})}`)}<div class="dash-top"><div class="dash-week">${weekStrip}</div><div class="dash-today">${todayBlock}</div><div class="dash-lessons">${lessonsBlock}</div></div>${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--blue)"><span class="label">აქტიური ბავშვები</span><strong>${active}</strong><span class="delta">ახალი ამ პერიოდში: ${newChildren}</span></div><div class="metric" style="--accent:var(--green)"><span class="label">მასწავლებლები</span><strong>${activePeople('staff',teacherStaff()).length}</strong><span class="delta">პერსონალი: ${activePeople('staff',personnelStaff()).length}</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">თვიური ტარიფები</span><strong>${money(due)}</strong><span class="delta">გადასახდელი თანხა</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">მიღებული თანხა</span><strong>${money(income)}</strong><span class="delta">ფაქტობრივი გადახდები</span></div></section><div class="dashboard-grid"><section class="section card"><div class="section-title"><h2>ფინანსები</h2><button class="btn small secondary" onclick="go('accounting')">ბუღალტერია →</button></div><div class="finance"><div><small>შემოსავალი</small><strong>${money(income)}</strong></div><div><small>ხარჯები</small><strong>${money(expenses)}</strong></div><div class="profit"><small>წმინდა მოგება</small><strong>${money(profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ხელფასები: <b>${money(salaries)}</b> (მასწავლებლები და პერსონალი).</p></section><section class="section card"><div class="section-title"><div><h2>სისტემის კონტროლი</h2><p class="meta">რა არის შესავსები ან გასაწმენდი</p></div></div><div class="quality-list"><button onclick="go('contacts')"><span>☎</span><b>ტელეფონის გარეშე</b><strong>${currentChildren.filter(c => !c.phone && !c.phone2).length}</strong></button><button onclick="go('payments')"><span>◷</span><b>გადახდის დღის გარეშე</b><strong>${unknownDays}</strong></button><button onclick="go('clubs')"><span>♙</span><b>მასწავლებლის გარეშე</b><strong>${circlesWithoutTeacher}</strong></button><button onclick="go('clubs')"><span>⌁</span><b>ძველი გამოუყენებელი წრეები</b><strong>${unusedLegacyCircles}</strong></button>${invalidTransactionDates?`<button onclick="go('accounting')"><span>!</span><b>არასწორი თარიღი</b><strong>${invalidTransactionDates}</strong></button>`:''}</div></section></div>`;
 }
 
 function children() {
@@ -537,6 +519,15 @@ function children() {
   return `${head('ბავშვები', `${allRows.length} ჩანაწერი`, '<button class="btn icon-btn" onclick="childForm()" aria-label="ბავშვის დამატება">＋</button>')}<button class="btn small secondary" style="margin-bottom:12px" onclick="go('contacts')">☎ კონტაქტები</button>${participantStatusTabs('children',allRows)}<input class="search" placeholder="ბავშვის ძებნა" aria-label="ბავშვების ძებნა" oninput="filterRows(this.value)">${rows.length?`<div class="list" id="rows">${rows.map(c=>{const circles=enrolledSubjects(c).map(item=>item.name);return `<article class="row clickable ${isActiveRecord(c,'children')?'':'record-inactive'}" data-search="${esc([c.name,c.parent,c.group,...circles].filter(Boolean).join(' '))}" onclick="showChild('${esc(c.id)}')"><div class="pic">${esc((c.name||'?').slice(0,1))}</div><div class="row-body"><div class="row-title">${esc(c.name)}</div><div class="meta">${esc(c.group||'ჯგუფი მითითებული არ არის')}<br><b>${circles.length?esc(circles.join(' · ')):'წრე მითითებული არ არის'}</b> · ${day(c.paymentDay)?`გადახდა ${day(c.paymentDay)} რიცხვში`:'გადახდის დღე არ არის'}</div></div><span class="badge ${isActiveRecord(c,'children')?'':'warn'}">${activeLabel(c,'children')}</span></article>`}).join('')}</div>`:empty(participantStatusFilter==='all'?'ბავშვების ჩანაწერები ჯერ არ არის':'ამ სტატუსით ბავშვები არ მოიძებნა',button('ბავშვის დამატება','childForm()'))}`;
 }
 
+async function quickPayChild(childId) {
+  const child=get('children',childId); if (!child) return;
+  const month=todayMonth(), rows=billingRows(month).filter(row=>row.child.id===childId&&number(row.remaining)>0&&row.price!==null);
+  const total=rows.reduce((sum,row)=>sum+number(row.remaining),0);
+  if (!rows.length) return toast('გადასახდელი არაფერია');
+  if (!confirm(`${child.name}: მივიღეთ ${money(total)} ნაღდით?\n${rows.map(row=>`• ${row.subject?.name||'საერთო ტარიფი'} — ${money(row.remaining)}`).join('\n')}`)) return;
+  for (const row of rows) await dataAdapter.create('payments',{childId,child:child.name,subjectId:row.subject?.id||'',amount:number(row.remaining),date:today(),billingMonth:month,method:'cash'});
+  go(current); toast(`გადახდა შენახულია · ${money(total)}`);
+}
 function showChild(id) { currentChildId = id; go('childProfile'); }
 function ageOf(birth) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birth || '')) return 'ასაკი მითითებული არ არის';
@@ -686,10 +677,21 @@ function circleMembersForm(subjectId) {
     go('clubs'); toast(`შენახულია · ცვლილება: ${changed}`);
   },{members:pool.filter(child=>toList(child.activityIds).includes(subjectId)).map(child=>child.id)});
 }
+function paySalary(personId) {
+  const person=get('staff',personId); if (!person) return;
+  const month=todayMonth(), row=payroll(item=>monthKey(item.date)===month,1).rows.find(item=>item.person.id===personId)||{due:0,accrued:0};
+  editSimple('expenses',null,{title:`ხელფასი · ${person.name} · ${prettyMonth(month)}`,category:'ხელფასები',amount:row.due||row.accrued||person.monthlySalary||'',date:today(),staffId:person.id});
+}
+function setStaffTab(tab) { staffTab=tab; go('staff'); }
 function teachers() {
-  const mode = person => person.payType === 'fixed' ? `ფიქსირებული: ${money(person.monthlySalary)} / თვე` : person.payType === 'percent' ? `პროცენტი: ${number(person.revenueShare)}%` : `გაკვეთილზე: ${money(person.lessonRate)}`;
-  const allRows=data.staff, rows=filteredByParticipantStatus('staff',allRows);
-  return `${head('მასწავლებლები', `${allRows.length} ადამიანი`, '<button class="btn icon-btn" onclick="editSimple(\'staff\')" aria-label="მასწავლებლის დამატება">＋</button>')}<p class="section-note">თითოეულ მასწავლებელს მიუთითეთ ანაზღაურების წესი. დარიცხვა გამოჩნდება ბუღალტერიაში.</p>${participantStatusTabs('staff',allRows)}${rows.length ? `<div class="list">${rows.map(person => { const subjects = data.clubs.filter(a => a.teacherId === person.id); const calc=teacherFinance(person); return `<article class="teacher-card card ${isActiveRecord(person,'staff')?'':'record-inactive'}"><div class="teacher-top"><div class="pic" style="--accent:var(--pink)">${esc((person.name||'?').slice(0,1))}</div><div><h2>${esc(person.name)}</h2><p class="meta">${esc(person.role || 'მასწავლებელი')}${person.phone ? ` · ${esc(person.phone)}` : ''}</p></div><button class="record-switch ${isActiveRecord(person,'staff')?'on':'off'}" onclick="toggleRecordActive('staff','${esc(person.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${activeLabel(person,'staff')}</span></button><button class="btn small secondary" onclick="editSimple('staff','${esc(person.id)}')">შეცვლა</button></div><div class="profile-details" style="margin-top:12px"><div><small>ანაზღაურება</small><b>${esc(mode(person))}</b></div><div><small>დარიცხულია ამ პერიოდში</small><b>${money(calc.accrued)}</b></div></div><div class="profile-details" style="margin-top:8px"><div><small>აქტიური მოსწავლეები</small><b>${new Set(subjects.flatMap(a=>activePeople('children').filter(c=>toList(c.activityIds).includes(a.id)).map(c=>c.id))).size}</b></div><div><small>ჩატარებული გაკვეთილები</small><b>${calc.lessons}</b></div></div><div class="activity-members"><b>საგნები:</b>${subjects.length ? subjects.map(a => `<button onclick="editSimple('clubs','${esc(a.id)}')">${esc(a.name)} ✎</button>`).join('') : '<span class="meta">ჯერ არ არის მინიჭებული</span>'}</div></article>`; }).join('')}</div>` : empty(participantStatusFilter==='all'?'მასწავლებლები ჯერ არ არის':'ამ სტატუსით მასწავლებლები არ მოიძებნა', button('მასწავლებლის დამატება', "editSimple('staff')"))}`;
+  const month=todayMonth(), pay=payroll(item=>monthKey(item.date)===month,1), payOf=id=>pay.rows.find(row=>row.person.id===id)||{accrued:0,paid:0,due:0};
+  const teacherRows=teacherStaff(), personnelRows=personnelStaff();
+  const pool=staffTab==='personnel'?personnelRows:teacherRows, rows=filteredByParticipantStatus('staff',pool);
+  const mode = person => person.payType === 'fixed' ? `ფიქსირებული: ${money(person.monthlySalary)} / თვე` : person.payType === 'percent' ? `პროცენტი: ${number(person.revenueShare)}%` : 'წრის წესით';
+  const salaryLine = person => { const row=payOf(person.id); return `<div class="profile-details" style="margin-top:8px"><div><small>${esc(prettyMonth(month))} · დარიცხული</small><b>${money(row.accrued)}</b></div><div><small>გაცემული</small><b>${money(row.paid)}</b></div></div><div class="card-actions">${row.due>0&&isActiveRecord(person,'staff')?`<button class="btn small" onclick="paySalary('${esc(person.id)}')">ხელფასის გაცემა · ${money(row.due)}</button>`:`<span class="pay-status paid">${row.accrued>0?'გაცემულია':'დარიცხვა არ არის'}</span>`}<button class="btn small secondary" onclick="editSimple('staff','${esc(person.id)}')">შეცვლა</button></div>`; };
+  const teacherCard = person => { const subjects=data.clubs.filter(a=>a.teacherId===person.id), calc=teacherFinance(person); return `<article class="teacher-card card ${isActiveRecord(person,'staff')?'':'record-inactive'}"><div class="teacher-top"><div class="pic" style="--accent:var(--pink)">${esc((person.name||'?').slice(0,1))}</div><div><h2>${esc(person.name)}</h2><p class="meta">${esc(person.role||'მასწავლებელი')}${person.phone?` · <a href="tel:${esc(String(person.phone).replace(/[^+\d]/g,''))}">${esc(person.phone)}</a>`:''}</p></div><button class="record-switch ${isActiveRecord(person,'staff')?'on':'off'}" onclick="toggleRecordActive('staff','${esc(person.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${activeLabel(person,'staff')}</span></button></div><div class="profile-details" style="margin-top:12px"><div><small>აქტიური მოსწავლეები</small><b>${new Set(subjects.flatMap(a=>activePeople('children').filter(c=>toList(c.activityIds).includes(a.id)).map(c=>c.id))).size}</b></div><div><small>ჩატარებული გაკვეთილები</small><b>${calc.lessons}</b></div></div><div class="activity-members"><b>წრეები:</b>${subjects.length?subjects.map(a=>`<button onclick="editSimple('clubs','${esc(a.id)}')">${esc(a.name)} · ${esc(teacherRuleLabel(a,person).replace('მასწავლებელს: ',''))} ✎</button>`).join(''):'<span class="meta">ჯერ არ არის მინიჭებული</span>'}</div>${salaryLine(person)}</article>`; };
+  const personnelCard = person => `<article class="teacher-card card ${isActiveRecord(person,'staff')?'':'record-inactive'}"><div class="teacher-top"><div class="pic" style="--accent:var(--yellow)">${esc((person.name||'?').slice(0,1))}</div><div><h2>${esc(person.name)}</h2><p class="meta">${esc(person.role||'პერსონალი')}${person.phone?` · <a href="tel:${esc(String(person.phone).replace(/[^+\d]/g,''))}">${esc(person.phone)}</a>`:''}</p></div><button class="record-switch ${isActiveRecord(person,'staff')?'on':'off'}" onclick="toggleRecordActive('staff','${esc(person.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${activeLabel(person,'staff')}</span></button></div><div class="profile-details" style="margin-top:12px"><div><small>ხელფასი</small><b>${number(person.monthlySalary)?`${money(person.monthlySalary)} / თვე`:'მითითებული არ არის'}</b></div><div><small>ხარჯის კატეგორია</small><b>ხელფასები</b></div></div>${salaryLine(person)}</article>`;
+  return `${head('თანამშრომლები', `${teacherRows.length} მასწავლებელი · ${personnelRows.length} პერსონალი`, '<button class="btn icon-btn" onclick="editSimple(\'staff\')" aria-label="თანამშრომლის დამატება">＋</button>')}<div class="status-tabs" role="tablist" style="margin-bottom:10px"><button class="${staffTab==='teachers'?'active':''}" onclick="setStaffTab('teachers')">მასწავლებლები <b>${teacherRows.length}</b></button><button class="${staffTab==='personnel'?'active':''}" onclick="setStaffTab('personnel')">პერსონალი <b>${personnelRows.length}</b></button></div><p class="section-note">${staffTab==='personnel'?'ბუღალტერი, დამლაგებელი და სხვა პერსონალი: ფიქსირებული ხელფასი, რომელიც „ხელფასების“ ხარჯად ჩაიწერება.':'მასწავლებლის ანაზღაურება ითვლება მისი წრეების წესით (პროცენტი ან თანხა გაკვეთილზე).'}</p>${participantStatusTabs('staff',pool)}${rows.length?`<div class="list cards-grid">${rows.map(staffTab==='personnel'?personnelCard:teacherCard).join('')}</div>`:empty(staffTab==='personnel'?'პერსონალი ჯერ არ არის':'მასწავლებლები ჯერ არ არის',button('დამატება',"editSimple('staff')"))}`;
 }
 
 function shiftCalendarMonth(count) { calendarMonth = shiftMonth(calendarMonth,count); calendarSelected = `${calendarMonth}-01`; go('schedule'); }
@@ -702,7 +704,7 @@ function recurringCircleEvents(date) {
   });
 }
 function calendarEventsForDate(date) {
-  const manual=data.schedule.filter(item=>item.date===date);
+  const manual=data.schedule.filter(item=>dateKey(item.date)===date);
   const manualKeys=new Set(manual.map(item=>`${item.subjectId||''}|${item.time||''}`));
   return [...manual,...recurringCircleEvents(date).filter(item=>!manualKeys.has(`${item.subjectId}|${item.time}`))].sort((a,b)=>String(a.time||'').localeCompare(String(b.time||'')));
 }
@@ -868,14 +870,24 @@ views.reports = () => {
   return baseReports() + `<div class="grid-cards section">${profits}${children}${breakdown}</div>`;
 };
 
+const NAV_GROUPS = [
+  ['', [['dashboard','⌂','მთავარი'],['schedule','▦','კალენდარი']]],
+  ['ბავშვები', [['children','☺','ბავშვები'],['attendance','✓','დასწრება'],['contacts','☎','კონტაქტები'],['leads','✉','განაცხადები']]],
+  ['ცენტრი', [['clubs','✦','წრეები'],['staff','♙','თანამშრომლები']]],
+  ['ფინანსები', [['payments','₾','გადახდები'],['expenses','−','ხარჯები'],['accounting','◫','ბუღალტერია'],['reports','▤','სტატისტიკა']]],
+  ['სხვა', [['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']]],
+];
+function navActive(id) { return id === current || (current === 'childProfile' && id === 'children'); }
 function renderDrawer() {
-  const items = [['dashboard','⌂','მთავარი'],['accounting','₾','ბუღალტერია'],['reports','▤','სტატისტიკა'],['schedule','▦','კალენდარი'],['clubs','✦','წრეები'],['staff','♙','მასწავლებლები'],['contacts','☎','კონტაქტები'],['attendance','✓','დასწრება'],['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']];
-  $("drawerGrid").innerHTML = items.map(([id, icon, label]) => `<button class="drawer-item" onclick="go('${id}')"><span>${icon}</span>${label}</button>`).join('');
+  $("drawerGrid").innerHTML = NAV_GROUPS.map(([title, items]) => `${title?`<div class="drawer-group">${title}</div>`:''}${items.map(([id, icon, label]) => `<button class="drawer-item ${navActive(id)?'active':''}" onclick="go('${id}')"><span>${icon}</span>${label}</button>`).join('')}`).join('');
+  const side = $("sidebar");
+  if (side) side.innerHTML = `<div class="side-brand"><img src="assets/logo.webp" alt="ღიმილი"><div><small>ცენტრის CRM</small><b>${esc(signedInUser?.name || 'ღიმილი')}</b></div></div><button class="btn side-add" onclick="quickAdd()">＋ დამატება</button>${NAV_GROUPS.map(([title, items]) => `<nav class="side-group">${title?`<small>${title}</small>`:''}${items.map(([id, icon, label]) => `<button class="side-item ${navActive(id)?'active':''}" onclick="go('${id}')"><span>${icon}</span>${label}</button>`).join('')}</nav>`).join('')}<button class="side-item side-exit" onclick="logoutCRM()"><span>⎋</span>გასვლა</button>`;
 }
 function toggleDrawer(open) {
+  if (open) renderDrawer();
   $("drawer").classList.toggle("hidden", !open);
   const more = document.querySelector('.nav button[data-nav="more"]');
-  if (more) more.classList.toggle('active', open || !['children','payments','expenses','childProfile'].includes(current));
+  if (more) more.classList.toggle('active', open || !['dashboard','children','payments','childProfile'].includes(current));
 }
 function filterRows(query) { document.querySelectorAll('#rows [data-search]').forEach(node => node.classList.toggle('hidden', !node.dataset.search.toLowerCase().includes(query.toLowerCase()))); }
 
@@ -1032,7 +1044,7 @@ async function deleteClub(id) {
 }
 
 const simpleFields = {
-  staff:[{name:'name',label:'სახელი და გვარი',required:true},{name:'subjectIds',label:'რომელ წრეებს უძღვება',type:'multi',options:[]},{name:'phone',label:'ტელეფონი',type:'tel'},{name:'role',label:'თანამდებობა'},{name:'active',label:'სტატუსი',type:'select',options:[['true','აქტიური'],['false','არააქტიური']]},{name:'payType',label:'ანაზღაურების წესი',type:'select',options:[['per_lesson','თითო ჩატარებულ გაკვეთილზე'],['percent','საგნის შემოსავლის პროცენტი'],['fixed','ფიქსირებული თვიური ხელფასი']]},{name:'lessonRate',label:'თანხა ერთ ჩატარებულ გაკვეთილზე, ₾',type:'number'},{name:'revenueShare',label:'პროცენტი საგნის შემოსავლიდან, %',type:'number'},{name:'monthlySalary',label:'ფიქსირებული ხელფასი თვეში, ₾',type:'number'}],
+  staff:[{name:'staffType',label:'ვინ არის',type:'select',options:[['teacher','მასწავლებელი / სპეციალისტი'],['staff','პერსონალი (ბუღალტერი, დამლაგებელი…)']]},{name:'name',label:'სახელი და გვარი',required:true},{name:'subjectIds',label:'რომელ წრეებს უძღვება',type:'multi',options:[]},{name:'phone',label:'ტელეფონი',type:'tel'},{name:'role',label:'თანამდებობა'},{name:'active',label:'სტატუსი',type:'select',options:[['true','აქტიური'],['false','არააქტიური']]},{name:'payType',label:'ანაზღაურების წესი',type:'select',options:[['per_lesson','თითო ჩატარებულ გაკვეთილზე'],['percent','საგნის შემოსავლის პროცენტი'],['fixed','ფიქსირებული თვიური ხელფასი']]},{name:'lessonRate',label:'თანხა ერთ ჩატარებულ გაკვეთილზე, ₾',type:'number'},{name:'revenueShare',label:'პროცენტი საგნის შემოსავლიდან, %',type:'number'},{name:'monthlySalary',label:'ფიქსირებული ხელფასი თვეში, ₾',type:'number'}],
   expenses:[{name:'title',label:'ხარჯის აღწერა',required:true},{name:'category',label:'კატეგორია',type:'select',options:expenseCategories},{name:'amount',label:'თანხა, ₾',type:'number',required:true},{name:'date',label:'თარიღი',type:'date',required:true}],
   tasks:[{name:'title',label:'Задача',required:true},{name:'due',label:'Срок',type:'date'},{name:'done',label:'Статус',type:'select',options:[['false','Открыта'],['true','Выполнена']]}],
   groups:[{name:'name',label:'Название группы',required:true},{name:'teacher',label:'Педагог'},{name:'schedule',label:'Расписание'}],
@@ -1046,7 +1058,7 @@ function editSimple(kind, id, initialOverride = null) {
   const attendanceSubject=kind==='attendance'?(old?.subjectId||initialOverride?.subjectId):'';
   const attendancePool=activePeople('children');
   const attendanceChildren=attendanceSubject?attendancePool.filter(child=>toList(child.activityIds).includes(attendanceSubject)):attendancePool;
-  const selectableStaff=activePeople('staff');
+  const selectableStaff=activePeople('staff',teacherStaff());
   if (kind==='clubs'&&old?.teacherId&&!selectableStaff.some(person=>person.id===old.teacherId)) { const assigned=get('staff',old.teacherId); if (assigned) selectableStaff.push(assigned); }
   const fields = simpleFields[kind]?.filter(field => kind !== 'clubs' || isCraftCircle(old) || !craftFields.has(field.name)).map(field => field.name === 'childId' && kind === 'attendance' ? {...field,options:attendanceChildren.map(c=>[c.id,c.name])} : field.name === 'subjectId' && kind === 'attendance' ? {...field,options:data.clubs.map(circle=>[circle.id,circle.name])} : field.name === 'subjectIds' && kind === 'staff' ? {...field,options:data.clubs.map(circle=>[circle.id,`${circle.name}${circle.teacherId&&circle.teacherId!==old?.id?` · ${get('staff',circle.teacherId)?.name||''}`:''}`])} : field.name === 'teacherId' && kind === 'clubs' ? {...field,options:[['','არ არის დანიშნული'],...selectableStaff.map(person=>[person.id,`${person.name}${isActiveRecord(person,'staff')?'':' · არააქტიური'}`])]} : field);
   if (!fields) return;
@@ -1054,10 +1066,10 @@ function editSimple(kind, id, initialOverride = null) {
   openForm(old ? 'Изменить запись' : 'Новая запись', fields, async values => {
     if (kind === 'tasks') values.done = values.done === 'true';
     let staffSubjects=null;
-    if (kind === 'staff') { staffSubjects=new Set(values.subjectIds||[]); delete values.subjectIds; if (!values.role.trim()) values.role = 'მასწავლებელი'; values.active=values.active!=='false'; values.lessonRate=number(values.lessonRate); values.revenueShare=number(values.revenueShare); values.monthlySalary=number(values.monthlySalary); }
-    if (kind === 'expenses') { values.amount = number(values.amount); if (initialOverride?.sourceRow) Object.assign(values, {sourceRow:initialOverride.sourceRow,sourceColumn:initialOverride.sourceColumn,sourceRaw:initialOverride.sourceRaw}); }
+    if (kind === 'staff') { if (values.staffType==='staff') { values.payType='fixed'; values.subjectIds=[]; } staffSubjects=new Set(values.subjectIds||[]); delete values.subjectIds; if (!values.role.trim()) values.role = values.staffType==='staff' ? 'პერსონალი' : 'მასწავლებელი'; values.active=values.active!=='false'; values.lessonRate=number(values.lessonRate); values.revenueShare=number(values.revenueShare); values.monthlySalary=number(values.monthlySalary); }
+    if (kind === 'expenses') { values.amount = number(values.amount); if (initialOverride?.sourceRow) Object.assign(values, {sourceRow:initialOverride.sourceRow,sourceColumn:initialOverride.sourceColumn,sourceRaw:initialOverride.sourceRaw}); if (initialOverride?.staffId) values.staffId=initialOverride.staffId; else if (old?.staffId) values.staffId=old.staffId; }
     if (kind === 'clubs') { values.appointmentOnly=values.appointmentOnly==='true'; const teacher=get('staff',values.teacherId); values.teacher=teacher?.name||''; values.weekdays=(values.weekdays||[]).map(Number); values.timeSlots=String(values.timeSlots||'').split(',').map(value=>value.trim()).filter(Boolean); values.tariff = values.tariff === '' ? null : number(values.tariff); values.lessonRate=values.lessonRate===''?null:number(values.lessonRate); if ('kindergartenRate' in values) values.kindergartenRate=values.kindergartenRate===''?30:number(values.kindergartenRate); if ('externalRate' in values) values.externalRate=values.externalRate===''?40:number(values.externalRate); values.teacherRate = values.teacherRate === '' ? null : number(values.teacherRate); values.teacherPercent=values.teacherPercent===''?null:number(values.teacherPercent); if (values.teacherPercent!=null&&(values.teacherPercent<0||values.teacherPercent>100)) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); }
-    if (kind === 'attendance') { const child=get('children',values.childId); values.name=child?.name||''; if (!old&&data.attendance.some(item=>item.childId===values.childId&&item.subjectId===values.subjectId&&item.date===values.date)) throw new Error('ამ ბავშვის დასწრება ამ დღისთვის უკვე მონიშნულია'); }
+    if (kind === 'attendance') { const child=get('children',values.childId); values.name=child?.name||''; if (!old&&data.attendance.some(item=>item.childId===values.childId&&item.subjectId===values.subjectId&&dateKey(item.date)===values.date)) throw new Error('ამ ბავშვის დასწრება ამ დღისთვის უკვე მონიშნულია'); }
     const saved = old ? await dataAdapter.update(kind, id, values) : await dataAdapter.create(kind, values);
     if (staffSubjects) {
       for (const circle of data.clubs) {
@@ -1066,8 +1078,8 @@ function editSimple(kind, id, initialOverride = null) {
         else if (!assigned&&isMine) await dataAdapter.update('clubs',circle.id,{teacherId:'',teacher:''});
       }
     }
-    go(kind==='attendance'&&current!=='attendance'?current:kind); toast('Запись сохранена');
-  }, old ? (kind==='clubs'&&isCraftCircle(old)?{...old,billingType:'per_lesson',kindergartenRate:old.kindergartenRate??30,externalRate:old.externalRate??40,timeSlots:toList(old.timeSlots).join(', ')}:kind==='clubs'?{...old,appointmentOnly:String(old.appointmentOnly===true||String(old.appointmentOnly).toUpperCase()==='TRUE'),timeSlots:toList(old.timeSlots).join(', ')}:kind==='staff'?{...old,active:String(isActiveRecord(old,'staff')),subjectIds:data.clubs.filter(circle=>circle.teacherId===old.id).map(circle=>circle.id)}:old) : initialOverride || { date:today(),done:'false',role:kind==='staff'?'მასწავლებელი':'',active:kind==='staff'?'true':undefined,payType:kind==='staff'?'per_lesson':'',billingType:kind==='clubs'?'monthly':'',weekdays:kind==='clubs'?[]:undefined,kindergartenRate:kind==='clubs'?30:'',externalRate:kind==='clubs'?40:'',status:kind==='attendance'?'present':'' });
+    go((kind==='attendance'||kind==='expenses')&&current!=='attendance'&&current!=='expenses'?current:kind); toast('Запись сохранена');
+  }, old ? (kind==='clubs'&&isCraftCircle(old)?{...old,billingType:'per_lesson',kindergartenRate:old.kindergartenRate??30,externalRate:old.externalRate??40,timeSlots:toList(old.timeSlots).join(', ')}:kind==='clubs'?{...old,appointmentOnly:String(old.appointmentOnly===true||String(old.appointmentOnly).toUpperCase()==='TRUE'),timeSlots:toList(old.timeSlots).join(', ')}:kind==='staff'?{...old,staffType:old.staffType||(isPersonnel(old)?'staff':'teacher'),active:String(isActiveRecord(old,'staff')),subjectIds:data.clubs.filter(circle=>circle.teacherId===old.id).map(circle=>circle.id)}:old) : initialOverride || { date:today(),done:'false',role:kind==='staff'?'მასწავლებელი':'',active:kind==='staff'?'true':undefined,staffType:kind==='staff'?(staffTab==='personnel'?'staff':'teacher'):'',payType:kind==='staff'?(staffTab==='personnel'?'fixed':'per_lesson'):'',billingType:kind==='clubs'?'monthly':'',weekdays:kind==='clubs'?[]:undefined,kindergartenRate:kind==='clubs'?30:'',externalRate:kind==='clubs'?40:'',status:kind==='attendance'?'present':'' });
   if (old && kind === 'attendance') {
     const actions=$('modalForm').querySelector('.form-actions');
     actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteAttendance('${esc(old.id)}')">წაშლა</button>`);
@@ -1075,6 +1087,11 @@ function editSimple(kind, id, initialOverride = null) {
   if (old && ['expenses','tasks','schedule'].includes(kind)) {
     const actions=$('modalForm').querySelector('.form-actions');
     actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('${esc(kind)}','${esc(old.id)}','${esc(old.title||old.name||old.date||'ჩანაწერი')}','${kind==='schedule'?'schedule':kind}')">წაშლა</button>`);
+  }
+  if (kind === 'staff') {
+    const typeSelect=$('field-staffType');
+    const sync=()=>{ const personnel=typeSelect.value==='staff'; ['subjectIds','payType','lessonRate','revenueShare'].forEach(name=>{ const node=$('modalForm').querySelector(`[name="${name}"]`)?.closest('.field'); if (node) node.hidden=personnel; }); const role=$('field-role'); if (role&&!role.value) role.placeholder=personnel?'ბუღალტერი, დამლაგებელი…':'მასწავლებელი'; };
+    typeSelect?.addEventListener('change',sync); sync();
   }
   if (old && kind === 'staff') {
     const actions=$('modalForm').querySelector('.form-actions');
