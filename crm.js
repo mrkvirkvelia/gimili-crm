@@ -181,7 +181,7 @@ async function api(url, options = {}) {
   if (window.GIMILI_API_URL && !window.GIMILI_API_URL.includes('__GIMILI_')) {
     const method = String(options.method || 'GET').toUpperCase();
     const payload = options.body ? JSON.parse(options.body) : {};
-    const action = url === '/api/login' ? 'login' : url === '/api/logout' ? 'logout' : url === '/api/import' ? 'import' : method === 'GET' ? 'list' : method === 'POST' ? 'create' : method === 'PUT' ? 'update' : method === 'DELETE' ? 'delete' : '';
+    const action = url === '/api/login' ? 'login' : url === '/api/logout' ? 'logout' : url === '/api/import' ? 'import' : url === '/api/batch' ? 'batch' : method === 'GET' ? 'list' : method === 'POST' ? 'create' : method === 'PUT' ? 'update' : method === 'DELETE' ? 'delete' : '';
     const token = localStorage.getItem('gimili_crm_session') || '';
     const response = await fetch(window.GIMILI_API_URL, {
       method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -198,18 +198,30 @@ async function api(url, options = {}) {
   return body;
 }
 
-async function loadData() {
-  const body = await api("/api/records");
+const CACHE_KEY = 'gimili_crm_cache_v1';
+function readCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (error) { return null; } }
+function writeCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ user: signedInUser, records: data, sourceRows, savedAt: Date.now() })); } catch (error) {} }
+function applySnapshot(body) {
   signedInUser = body.user;
   data = Object.fromEntries(sections.map(key => [key, body.records?.[key] || []]));
   sourceRows = body.sourceRows || [];
+}
+async function loadData() {
+  const body = await api("/api/records");
+  if (pendingOps.length || savingNow) return; // local edits still on the way — keep them on screen
+  applySnapshot(body);
+  writeCache();
+  renderShell();
+}
+function renderShell() {
   $("role").textContent = "სამუშაო კაბინეტი";
   document.querySelector(".brand b").textContent = signedInUser.name || signedInUser.email;
   document.querySelector(".avatar").textContent = "Д";
   document.querySelector(".avatar").classList.remove("hidden");
   document.querySelector(".nav").classList.remove("hidden");
   renderDrawer();
-  go(current);
+  const modalOpen = !$("modal").classList.contains('hidden');
+  if (!modalOpen) go(current);
 }
 
 async function ensureBillingCatalog() {
@@ -254,22 +266,20 @@ async function boot() {
   document.querySelector(".avatar").classList.add("hidden");
   document.querySelector(".nav").classList.add("hidden");
   const splashSafetyTimer = setTimeout(() => $("splash")?.classList.add("done"), 4500);
+  if (!localStorage.getItem('gimili_crm_session') && window.GIMILI_API_URL) { location.replace('./login.html'); return; }
+  const cached = readCache();
+  if (cached?.user) { applySnapshot(cached); renderShell(); $("splash")?.classList.add("done"); }
   try {
     await loadData();
     $("splash")?.classList.add("done");
-    if (!sourceRows.length) {
-      try {
-        const result = await api('/api/import', { method:'POST', body:'{}' });
-        await loadData();
-        if (result.sourceRows) toast(`Из таблицы обновлено ${result.sourceRows} строк`);
-      } catch (error) { toast('Таблица пока не импортирована: откройте Настройки и повторите'); }
-    }
     try { await ensureBillingCatalog(); }
     catch (error) { toast('ტარიფების კატალოგის განახლება ვერ მოხერხდა'); }
   }
   catch (error) {
+    if (error.status === 401) { try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem('gimili_crm_session'); } catch (_) {} location.replace('./login.html'); return; }
+    if (cached?.user && error.status !== 403) { clearTimeout(splashSafetyTimer); toast('ინტერნეტთან კავშირი არ არის — ნაჩვენებია ბოლოს შენახული მონაცემები'); return; }
     const denied = error.status === 403;
-    $("view").innerHTML = `<section class="access-card card"><img src="./assets/logo.png" alt="ღიმილი"><h1>${denied ? "Нет доступа к записям" : error.status === 401 ? "Рабочая CRM" : "Не удалось загрузить данные"}</h1><p>${denied ? "Записи детей и контакты доступны только Диане и владельцу." : error.status === 401 ? "Войдите по разрешённому email и паролю." : "Данные не потеряны. Проверьте соединение и повторите попытку."}</p>${error.status === 401 || denied ? '<a class="btn access-button" href="./login.html">Войти в CRM</a>' : '<button class="btn" onclick="boot()">Повторить</button>'}</section>`;
+    $("view").innerHTML = `<section class="access-card card"><img src="./assets/logo.webp" alt="ღიმილი"><h1>${denied ? "Нет доступа к записям" : error.status === 401 ? "Рабочая CRM" : "Не удалось загрузить данные"}</h1><p>${denied ? "Записи детей и контакты доступны только Диане и владельцу." : error.status === 401 ? "Войдите по разрешённому email и паролю." : "Данные не потеряны. Проверьте соединение и повторите попытку."}</p>${error.status === 401 || denied ? '<a class="btn access-button" href="./login.html">Войти в CRM</a>' : '<button class="btn" onclick="boot()">Повторить</button>'}</section>`;
     if (error.status === 401 || denied) {
       const card = $("view").querySelector('.access-card');
       card.querySelector('p').textContent = 'Войдите по разрешённому email и паролю.';
@@ -284,12 +294,52 @@ async function boot() {
   $("splash")?.classList.add("done");
 }
 
+// Writes are applied on screen immediately and sent to the sheet in the background.
+// Several quick changes are sent together in one request.
+let pendingOps = [], savingNow = false, batchSupported = true;
+function newId(kind) { return `${kind}-${(crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&3|8)).toString(16); }))}`; }
+function setSavingIndicator() { document.body.classList.toggle('saving', savingNow || pendingOps.length > 0); }
+function queueOp(op) { pendingOps.push(op); setSavingIndicator(); writeCache(); flushOps(); }
+async function flushOps() {
+  if (savingNow || !pendingOps.length) return;
+  savingNow = true; setSavingIndicator();
+  const ops = pendingOps.splice(0, 40);
+  try {
+    if (ops.length > 1 && batchSupported) {
+      try {
+        const result = await api('/api/batch', { method: 'POST', body: JSON.stringify({ ops }) });
+        const failed = (result.results || []).find(item => !item.ok);
+        if (failed) throw new Error(failed.error || 'შენახვა ვერ მოხერხდა');
+      } catch (error) {
+        if (!/Неизвестная операция/.test(error.message)) throw error;
+        batchSupported = false; // older server: send one by one
+        for (const op of ops) await sendOp(op);
+      }
+    } else for (const op of ops) await sendOp(op);
+  } catch (error) {
+    pendingOps = [];
+    toast(`შენახვა ვერ მოხერხდა: ${error.message}. მონაცემები განახლდება.`);
+    savingNow = false; setSavingIndicator();
+    try { await loadData(); } catch (_) {}
+    return;
+  }
+  savingNow = false; setSavingIndicator();
+  if (pendingOps.length) flushOps(); else writeCache();
+}
+async function sendOp(op) {
+  if (op.action === 'create') return api('/api/records', { method: 'POST', body: JSON.stringify({ kind: op.kind, record: op.record, id: op.id }) });
+  if (op.action === 'update') return api('/api/records', { method: 'PUT', body: JSON.stringify({ id: op.id, kind: op.kind, record: op.record }) });
+  if (op.action === 'delete') return api('/api/records', { method: 'DELETE', body: JSON.stringify({ kind: op.kind, id: op.id }) });
+}
+window.addEventListener('beforeunload', event => { if (savingNow || pendingOps.length) { event.preventDefault(); event.returnValue = ''; } });
+
 const dataAdapter = {
   async list(kind) { return structuredClone(data[kind] || []); },
   async create(kind, record) {
-    const result = await api("/api/records", { method: "POST", body: JSON.stringify({ kind, record }) });
-    const item = { ...record, id: result.id };
+    const id = newId(kind);
+    const item = { ...record, id };
     data[kind].unshift(item);
+    queueOp({ action: 'create', kind, id, record });
     return item;
   },
   async update(kind, id, patch) {
@@ -303,13 +353,17 @@ const dataAdapter = {
       }
       item.manualOverrides = [...overrides];
     }
-    await api("/api/records", { method: "PUT", body: JSON.stringify({ id, kind, record: item }) });
     data[kind][data[kind].findIndex(x => x.id === id)] = item;
+    const queued = pendingOps.find(op => op.kind === kind && op.id === id && op.action !== 'delete');
+    if (queued) queued.record = queued.action === 'create' ? (({id: _, ...rest}) => rest)(item) : item; // merge into the waiting change
+    else queueOp({ action: 'update', kind, id, record: item });
     return item;
   },
   async remove(kind, id) {
-    await api("/api/records", { method: "DELETE", body: JSON.stringify({ kind, id }) });
     data[kind] = data[kind].filter(item => item.id !== id);
+    const queuedCreate = pendingOps.findIndex(op => op.kind === kind && op.id === id && op.action === 'create');
+    if (queuedCreate >= 0 && !savingNow) { pendingOps = pendingOps.filter(op => !(op.kind === kind && op.id === id)); setSavingIndicator(); writeCache(); return; }
+    queueOp({ action: 'delete', kind, id });
   },
   async sync() { return { provider: "CRM", status: "Данные сохранены в общей базе", sheets: "Импорт по запросу" }; },
 };
@@ -854,7 +908,7 @@ function openForm(title, fields, submit, initial = {}) {
 function closeModal() { $("modal").classList.add('hidden'); }
 async function logoutCRM() {
   try { await api('/api/logout', {method:'POST', body:'{}'}); }
-  finally { localStorage.removeItem('gimili_crm_session'); localStorage.removeItem('gimili_crm_user'); location.replace('./login.html'); }
+  finally { localStorage.removeItem(CACHE_KEY); localStorage.removeItem('gimili_crm_session'); localStorage.removeItem('gimili_crm_user'); location.replace('./login.html'); }
 }
 function toast(message) { const node = $("toast"); node.textContent = translateText(message); node.classList.remove('hidden'); clearTimeout(window._toastTimer); window._toastTimer = setTimeout(() => node.classList.add('hidden'), 3200); }
 
