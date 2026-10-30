@@ -232,11 +232,15 @@ function writeCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ u
 const serverOutdatedNote = () => serverVersion >= 4 ? '' : `<div class="warn-box">⚠ სერვერის კოდი (Apps Script) მოძველებულია: რამდენიმე მასწავლებელი ერთ წრეზე, კვირეული ანაზღაურება და თვის დახურვა არ შეინახება. საჭიროა Code.gs-ის განახლება.</div>`;
 const displayName = user => /диан|დიან|detitbilisi/i.test(String([user?.name, user?.email].join(' '))) ? 'დიანა დავიდოვა' : (user?.name || user?.email || '');
 let serverVersion = 0;
+// children are always kept in alphabetical order (cards without a name go last)
+const byName = (a, b) => { const x = String(a?.name || '').trim(), y = String(b?.name || '').trim(); if (!x || !y) return x ? -1 : y ? 1 : 0; return x.localeCompare(y, 'ka', { sensitivity: 'base', numeric: true }); };
+const sortChildren = () => { data.children.sort(byName); };
 function applySnapshot(body) {
   serverVersion = Number(body.serverVersion || 0);
   signedInUser = body.user ? { ...body.user, name: displayName(body.user) } : body.user;
   data = Object.fromEntries(sections.map(key => [key, body.records?.[key] || []]));
   sourceRows = body.sourceRows || [];
+  sortChildren();
 }
 async function loadData() {
   const body = await api("/api/records");
@@ -334,6 +338,7 @@ const dataAdapter = {
     const id = newId(kind);
     const item = { ...record, id };
     data[kind].unshift(item);
+    if (kind === 'children') sortChildren();
     queueOp({ action: 'create', kind, id, record });
     return item;
   },
@@ -349,6 +354,7 @@ const dataAdapter = {
       item.manualOverrides = [...overrides];
     }
     data[kind][data[kind].findIndex(x => x.id === id)] = item;
+    if (kind === 'children' && old.name !== item.name) sortChildren();
     const queued = pendingOps.find(op => op.kind === kind && op.id === id && op.action !== 'delete');
     if (queued) queued.record = queued.action === 'create' ? (({id: _, ...rest}) => rest)(item) : item; // merge into the waiting change
     else queueOp({ action: 'update', kind, id, record: item });
