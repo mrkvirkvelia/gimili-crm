@@ -520,7 +520,7 @@ function teacherAccrualBreakdown(person, range, months) {
     lines.push({ subject, rule, amount: ruleAccrual(rule, [subject], range, months, person) });
   });
   const d = effectiveRule(null, person);
-  if (onDefault.length || ['monthly', 'mixed'].includes(d.type)) lines.push({ subject: null, subjects: onDefault, rule: d, amount: ruleAccrual(d, onDefault, range, months, person) });
+  if (onDefault.length || (!circles.length && ['monthly', 'mixed'].includes(d.type))) lines.push({ subject: null, subjects: onDefault, rule: d, amount: ruleAccrual(d, onDefault, range, months, person) });
   return lines;
 }
 function circleTeacherCost(subject, range, months) {
@@ -1169,6 +1169,14 @@ function syncAssignmentRow(row) {
   row.querySelector('[name=asg_amount]').hidden = !['monthly','weekly','per_lesson','per_child','per_day','mixed'].includes(type);
   row.querySelector('[name=asg_percent]').hidden = !['percent','mixed'].includes(type);
 }
+function syncCircleRow(row) {
+  const on = row.querySelector('[name=tc_on]').checked, type = row.querySelector('select').value;
+  row.classList.toggle('on', on);
+  row.querySelector('.tc-rule').hidden = !on;
+  const [amount, percent] = row.querySelectorAll('.asg-nums input');
+  amount.hidden = !['monthly','weekly','per_lesson','per_child','per_day','mixed'].includes(type);
+  percent.hidden = !['percent','mixed'].includes(type);
+}
 function openForm(title, fields, submit, initial = {}) {
   $("modalTitle").textContent = translateText(title);
   const form = $("modalForm");
@@ -1180,6 +1188,9 @@ function openForm(title, fields, submit, initial = {}) {
       input = `<select id="${id}" name="${field.name}" ${field.required ? 'required' : ''}>${field.options.map(option => { const [optionValue, label] = Array.isArray(option) ? option : [option, option]; return `<option value="${esc(optionValue)}" ${String(value) === String(optionValue) ? 'selected' : ''}>${esc(label)}</option>`; }).join('')}</select>`;
     } else if (field.type === 'multi') {
       input = `<div class="form-options">${field.options.map(option => { const [optionValue, label] = Array.isArray(option) ? option : [option, option]; return `<label class="form-option"><input type="checkbox" name="${field.name}" value="${esc(optionValue)}" ${toList(value).map(String).includes(String(optionValue)) ? 'checked' : ''}><span>${esc(label)}</span></label>`; }).join('')}</div>`;
+    } else if (field.type === 'teacherCircles') {
+      const current = value && typeof value === 'object' ? value : {};
+      input = `<div class="tc-list" id="${id}">${field.options.map(([circleId, name, others]) => { const a = current[circleId]; return `<div class="tc-row ${a ? 'on' : ''}" data-circle="${esc(circleId)}"><label class="tc-head"><input type="checkbox" name="tc_on" value="${esc(circleId)}" ${a ? 'checked' : ''}><span><b>${esc(name)}</b>${others ? `<small>ასევე: ${esc(others)}</small>` : ''}</span></label><div class="tc-rule"><select name="tc_type_${esc(circleId)}" aria-label="ანაზღაურება · ${esc(name)}"><option value="">საერთო წესით</option>${PAY_TYPES.map(([v,l]) => `<option value="${v}" ${a && a.payType === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><div class="asg-nums"><input name="tc_amount_${esc(circleId)}" type="number" min="0" step="any" inputmode="decimal" placeholder="თანხა, ₾" value="${a?.amount ?? ''}"><input name="tc_percent_${esc(circleId)}" type="number" min="0" max="100" step="any" inputmode="decimal" placeholder="%" value="${a?.percent ?? ''}"></div></div></div>`; }).join('')}</div>`;
     } else if (field.type === 'assignments') {
       const list = Array.isArray(value) && value.length ? value : [{}];
       input = `<div class="asg-list" id="${id}" data-options='${esc(JSON.stringify(field.options))}'>${list.map(item => assignmentRowHtml(item, field.options)).join('')}</div><button type="button" class="btn small secondary asg-add">＋ კიდევ ერთი მასწავლებელი</button>`;
@@ -1189,7 +1200,8 @@ function openForm(title, fields, submit, initial = {}) {
   }).join('') + '<div class="form-actions"><button class="btn secondary" type="button" onclick="closeModal()">Отмена</button><button class="btn" type="submit">Сохранить</button></div>';
   translateUi(form);
   form.querySelectorAll('.asg-row').forEach(syncAssignmentRow);
-  form.onchange = event => { const row = event.target.closest?.('.asg-row'); if (row) syncAssignmentRow(row); };
+  form.querySelectorAll('.tc-row').forEach(syncCircleRow);
+  form.onchange = event => { const row = event.target.closest?.('.asg-row'); if (row) syncAssignmentRow(row); const tc = event.target.closest?.('.tc-row'); if (tc) syncCircleRow(tc); };
   form.onclick = event => {
     if (event.target.closest?.('.asg-remove')) { const list = event.target.closest('.asg-list'); event.target.closest('.asg-row').remove(); if (!list.children.length) list.insertAdjacentHTML('beforeend', assignmentRowHtml({}, JSON.parse(list.dataset.options))); }
     if (event.target.closest?.('.asg-add')) { const list = event.target.closest('.field').querySelector('.asg-list'); list.insertAdjacentHTML('beforeend', assignmentRowHtml({}, JSON.parse(list.dataset.options))); syncAssignmentRow(list.lastElementChild); }
@@ -1198,7 +1210,7 @@ function openForm(title, fields, submit, initial = {}) {
     event.preventDefault();
     const submitButton = form.querySelector('button[type="submit"]');
     submitButton.disabled = true;
-    try { const formData = new FormData(form); const values = Object.fromEntries(formData); fields.filter(field => field.type === 'multi').forEach(field => { values[field.name] = formData.getAll(field.name); }); fields.filter(field => field.type === 'assignments').forEach(field => { const t = formData.getAll('asg_teacher'), ty = formData.getAll('asg_type'), am = formData.getAll('asg_amount'), pc = formData.getAll('asg_percent'); const seen = new Set(); values[field.name] = t.map((teacherId, i) => ({ teacherId, payType: ty[i] || '', amount: optNumber(am[i]), percent: optNumber(pc[i]) })).filter(item => item.teacherId && !seen.has(item.teacherId) && seen.add(item.teacherId)); if (values[field.name].some(item => item.percent != null && (item.percent < 0 || item.percent > 100))) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); ['asg_teacher','asg_type','asg_amount','asg_percent'].forEach(key => delete values[key]); }); await submit(values); closeModal(); }
+    try { const formData = new FormData(form); const values = Object.fromEntries(formData); fields.filter(field => field.type === 'multi').forEach(field => { values[field.name] = formData.getAll(field.name); }); fields.filter(field => field.type === 'teacherCircles').forEach(field => { const chosen = {}; formData.getAll('tc_on').forEach(circleId => { const percent = optNumber(formData.get(`tc_percent_${circleId}`)); if (percent != null && (percent < 0 || percent > 100)) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); chosen[circleId] = { payType: formData.get(`tc_type_${circleId}`) || '', amount: optNumber(formData.get(`tc_amount_${circleId}`)), percent }; }); Object.keys(values).filter(key => key.startsWith('tc_')).forEach(key => delete values[key]); values[field.name] = chosen; }); fields.filter(field => field.type === 'assignments').forEach(field => { const t = formData.getAll('asg_teacher'), ty = formData.getAll('asg_type'), am = formData.getAll('asg_amount'), pc = formData.getAll('asg_percent'); const seen = new Set(); values[field.name] = t.map((teacherId, i) => ({ teacherId, payType: ty[i] || '', amount: optNumber(am[i]), percent: optNumber(pc[i]) })).filter(item => item.teacherId && !seen.has(item.teacherId) && seen.add(item.teacherId)); if (values[field.name].some(item => item.percent != null && (item.percent < 0 || item.percent > 100))) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); ['asg_teacher','asg_type','asg_amount','asg_percent'].forEach(key => delete values[key]); }); await submit(values); closeModal(); }
     catch (error) { toast(error.message || 'Не удалось сохранить'); }
     finally { submitButton.disabled = false; }
   };
@@ -1338,7 +1350,7 @@ async function deleteClub(id) {
 }
 
 const simpleFields = {
-  staff:[{name:'staffType',label:'ვინ არის',type:'select',options:[['teacher','მასწავლებელი / სპეციალისტი'],['staff','პერსონალი (ბუღალტერი, დამლაგებელი…)']]},{name:'name',label:'სახელი და გვარი',required:true},{name:'phone',label:'ტელეფონი',type:'tel'},{name:'role',label:'თანამდებობა'},{name:'active',label:'სტატუსი',type:'select',options:[['true','აქტიური'],['false','არააქტიური']]},{name:'subjectIds',label:'რომელ წრეებს უძღვება (წრის საკუთარი წესი იცვლება წრის ბარათში)',type:'multi',options:[]},{name:'payType',label:'საერთო ანაზღაურების წესი',type:'select',options:PAY_TYPES},{name:'monthlySalary',label:'თვიური თანხა, ₾',type:'number'},{name:'weeklyRate',label:'კვირეული თანხა, ₾',type:'number'},{name:'lessonRate',label:'თანხა ერთეულზე (გაკვეთილი / ბავშვი / დღე), ₾',type:'number'},{name:'revenueShare',label:'პროცენტი მიღებული თანხიდან, %',type:'number'},{name:'payoutPeriod',label:'ხელფასის გაცემა',type:'select',options:[['month','თვეში ერთხელ'],['week','კვირაში ერთხელ']]},{name:'workDays',label:'სამუშაო დღეები (წინასწარი ჩაწერისთვის)',type:'multi',options:[[1,'ორშ'],[2,'სამ'],[3,'ოთხ'],[4,'ხუთ'],[5,'პარ'],[6,'შაბ'],[0,'კვ']]}],
+  staff:[{name:'staffType',label:'ვინ არის',type:'select',options:[['teacher','მასწავლებელი / სპეციალისტი'],['staff','პერსონალი (ბუღალტერი, დამლაგებელი…)']]},{name:'name',label:'სახელი და გვარი',required:true},{name:'phone',label:'ტელეფონი',type:'tel'},{name:'role',label:'თანამდებობა'},{name:'active',label:'სტატუსი',type:'select',options:[['true','აქტიური'],['false','არააქტიური']]},{name:'teacherCircles',label:'წრეები და ანაზღაურება — მონიშნეთ, რომელ წრეს უძღვება და როგორ იღებს ხელფასს',type:'teacherCircles',options:[]},{name:'payType',label:'საერთო წესი (წრეებისთვის, სადაც „საერთო წესით“ არის არჩეული)',type:'select',options:PAY_TYPES},{name:'monthlySalary',label:'თვიური თანხა, ₾',type:'number'},{name:'weeklyRate',label:'კვირეული თანხა, ₾',type:'number'},{name:'lessonRate',label:'თანხა ერთეულზე (გაკვეთილი / ბავშვი / დღე), ₾',type:'number'},{name:'revenueShare',label:'პროცენტი მიღებული თანხიდან, %',type:'number'},{name:'payoutPeriod',label:'ხელფასის გაცემა',type:'select',options:[['month','თვეში ერთხელ'],['week','კვირაში ერთხელ']]},{name:'workDays',label:'სამუშაო დღეები (წინასწარი ჩაწერისთვის)',type:'multi',options:[[1,'ორშ'],[2,'სამ'],[3,'ოთხ'],[4,'ხუთ'],[5,'პარ'],[6,'შაბ'],[0,'კვ']]}],
   expenses:[{name:'title',label:'ხარჯის აღწერა',required:true},{name:'category',label:'კატეგორია',type:'select',options:expenseCategories},{name:'amount',label:'თანხა, ₾',type:'number',required:true},{name:'date',label:'თარიღი',type:'date',required:true}],
   tasks:[{name:'title',label:'Задача',required:true},{name:'due',label:'Срок',type:'date'},{name:'done',label:'Статус',type:'select',options:[['false','Открыта'],['true','Выполнена']]}],
   groups:[{name:'name',label:'Название группы',required:true},{name:'teacher',label:'Педагог'},{name:'schedule',label:'Расписание'}],
@@ -1354,27 +1366,30 @@ function editSimple(kind, id, initialOverride = null) {
   const attendanceChildren=attendanceSubject?attendancePool.filter(child=>toList(child.activityIds).includes(attendanceSubject)):attendancePool;
   const selectableStaff=activePeople('staff',teacherStaff());
   if (kind==='clubs') circleAssignments(old).forEach(item=>{ if (!selectableStaff.some(person=>person.id===item.teacherId)) { const assigned=get('staff',item.teacherId); if (assigned) selectableStaff.push(assigned); } });
-  const fields = simpleFields[kind]?.filter(field => kind !== 'clubs' || isCraftCircle(old) || !craftFields.has(field.name)).map(field => field.name === 'childId' && kind === 'attendance' ? {...field,options:attendanceChildren.map(c=>[c.id,c.name])} : field.name === 'subjectId' && kind === 'attendance' ? {...field,options:data.clubs.map(circle=>[circle.id,circle.name])} : field.name === 'subjectIds' && kind === 'staff' ? {...field,options:data.clubs.map(circle=>{const others=circleAssignments(circle).filter(item=>item.teacherId!==old?.id).map(item=>get('staff',item.teacherId)?.name).filter(Boolean);return [circle.id,`${circle.name}${others.length?` · ${others.join(', ')}`:''}`];})} : field.name === 'assignments' && kind === 'clubs' ? {...field,options:selectableStaff.map(person=>[person.id,`${person.name}${isActiveRecord(person,'staff')?'':' · არააქტიური'}`])} : field);
+  const fields = simpleFields[kind]?.filter(field => kind !== 'clubs' || isCraftCircle(old) || !craftFields.has(field.name)).map(field => field.name === 'childId' && kind === 'attendance' ? {...field,options:attendanceChildren.map(c=>[c.id,c.name])} : field.name === 'subjectId' && kind === 'attendance' ? {...field,options:data.clubs.map(circle=>[circle.id,circle.name])} : field.name === 'teacherCircles' && kind === 'staff' ? {...field,options:data.clubs.map(circle=>{const others=circleAssignments(circle).filter(item=>item.teacherId!==old?.id).map(item=>get('staff',item.teacherId)?.name).filter(Boolean);return [circle.id,circle.name,others.join(', ')];})} : field.name === 'assignments' && kind === 'clubs' ? {...field,options:selectableStaff.map(person=>[person.id,`${person.name}${isActiveRecord(person,'staff')?'':' · არააქტიური'}`])} : field);
   if (!fields) return;
   if (kind === 'attendance' && !attendanceChildren.length) return toast('აქტიური ბავშვები ამ წრეში არ არიან');
   openForm(old ? 'Изменить запись' : 'Новая запись', fields, async values => {
     if (kind === 'tasks') values.done = values.done === 'true';
     if (['expenses','attendance'].includes(kind)) { if (old) assertOpen(old.date); assertOpen(values.date); }
     let staffSubjects=null;
-    if (kind === 'staff') { if (values.staffType==='staff') { values.payType='monthly'; values.subjectIds=[]; } staffSubjects=new Set(values.subjectIds||[]); delete values.subjectIds; if (!values.role.trim()) values.role = values.staffType==='staff' ? 'პერსონალი' : 'მასწავლებელი'; values.active=values.active!=='false'; ['lessonRate','revenueShare','monthlySalary','weeklyRate'].forEach(key=>values[key]=number(values[key])); if (values.revenueShare<0||values.revenueShare>100) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); values.workDays=(values.workDays||[]).map(Number); }
+    if (kind === 'staff') { if (values.staffType==='staff') { values.payType='monthly'; values.teacherCircles={}; } staffSubjects=values.teacherCircles||{}; delete values.teacherCircles; if (!values.role.trim()) values.role = values.staffType==='staff' ? 'პერსონალი' : 'მასწავლებელი'; values.active=values.active!=='false'; ['lessonRate','revenueShare','monthlySalary','weeklyRate'].forEach(key=>values[key]=number(values[key])); if (values.revenueShare<0||values.revenueShare>100) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); values.workDays=(values.workDays||[]).map(Number); }
     if (kind === 'expenses') { values.amount = number(values.amount); if (initialOverride?.sourceRow) Object.assign(values, {sourceRow:initialOverride.sourceRow,sourceColumn:initialOverride.sourceColumn,sourceRaw:initialOverride.sourceRaw}); if (initialOverride?.staffId) values.staffId=initialOverride.staffId; else if (old?.staffId) values.staffId=old.staffId; }
     if (kind === 'clubs') { values.appointmentOnly=values.appointmentOnly==='true'; Object.assign(values, assignmentFields(values.assignments||[])); values.weekdays=(values.weekdays||[]).map(Number); values.timeSlots=String(values.timeSlots||'').split(',').map(value=>value.trim()).filter(Boolean); values.tariff = values.tariff === '' ? null : number(values.tariff); values.lessonRate=values.lessonRate===''?null:number(values.lessonRate); if ('kindergartenRate' in values) values.kindergartenRate=values.kindergartenRate===''?30:number(values.kindergartenRate); if ('externalRate' in values) values.externalRate=values.externalRate===''?40:number(values.externalRate); }
     if (kind === 'attendance') { const child=get('children',values.childId); values.name=child?.name||''; if (!old&&data.attendance.some(item=>item.childId===values.childId&&item.subjectId===values.subjectId&&dateKey(item.date)===values.date)) throw new Error('ამ ბავშვის დასწრება ამ დღისთვის უკვე მონიშნულია'); }
     const saved = old ? await dataAdapter.update(kind, id, values) : await dataAdapter.create(kind, values);
     if (staffSubjects) {
       for (const circle of data.clubs) {
-        const list=circleAssignments(circle), isMine=list.some(item=>item.teacherId===saved.id), assigned=staffSubjects.has(circle.id);
-        if (assigned&&!isMine) await dataAdapter.update('clubs',circle.id,assignmentFields([...list,{teacherId:saved.id,payType:'',amount:null,percent:null}]));
-        else if (!assigned&&isMine) await dataAdapter.update('clubs',circle.id,assignmentFields(list.filter(item=>item.teacherId!==saved.id)));
+        const list=circleAssignments(circle), mine=list.find(item=>item.teacherId===saved.id), want=staffSubjects[circle.id];
+        let next=null;
+        if (want&&!mine) next=[...list,{teacherId:saved.id,...want}];
+        else if (want&&mine&&(mine.payType!==want.payType||mine.amount!==want.amount||mine.percent!==want.percent)) next=list.map(item=>item.teacherId===saved.id?{teacherId:saved.id,...want}:item);
+        else if (!want&&mine) next=list.filter(item=>item.teacherId!==saved.id);
+        if (next) await dataAdapter.update('clubs',circle.id,assignmentFields(next));
       }
     }
     go((kind==='attendance'||kind==='expenses')&&current!=='attendance'&&current!=='expenses'?current:kind); toast('Запись сохранена');
-  }, old ? (kind==='clubs'&&isCraftCircle(old)?{...old,assignments:circleAssignments(old),billingType:'per_lesson',kindergartenRate:old.kindergartenRate??30,externalRate:old.externalRate??40,timeSlots:toList(old.timeSlots).join(', ')}:kind==='clubs'?{...old,assignments:circleAssignments(old),appointmentOnly:String(isAppointmentCircle(old)),timeSlots:toList(old.timeSlots).join(', ')}:kind==='staff'?{...old,staffType:old.staffType||(isPersonnel(old)?'staff':'teacher'),payType:teacherDefault(old).type,payoutPeriod:old.payoutPeriod||'month',workDays:toList(old.workDays),active:String(isActiveRecord(old,'staff')),subjectIds:teacherCircles(old.id).map(circle=>circle.id)}:old) : initialOverride || { date:today(),done:'false',role:kind==='staff'?'მასწავლებელი':'',active:kind==='staff'?'true':undefined,staffType:kind==='staff'?(staffTab==='personnel'?'staff':'teacher'):'',payType:kind==='staff'?(staffTab==='personnel'?'monthly':'percent'):'',revenueShare:kind==='staff'&&staffTab!=='personnel'?50:'',payoutPeriod:kind==='staff'?'month':'',billingType:kind==='clubs'?'monthly':'',weekdays:kind==='clubs'?[]:undefined,kindergartenRate:kind==='clubs'?30:'',externalRate:kind==='clubs'?40:'',status:kind==='attendance'?'present':'' });
+  }, old ? (kind==='clubs'&&isCraftCircle(old)?{...old,assignments:circleAssignments(old),billingType:'per_lesson',kindergartenRate:old.kindergartenRate??30,externalRate:old.externalRate??40,timeSlots:toList(old.timeSlots).join(', ')}:kind==='clubs'?{...old,assignments:circleAssignments(old),appointmentOnly:String(isAppointmentCircle(old)),timeSlots:toList(old.timeSlots).join(', ')}:kind==='staff'?{...old,staffType:old.staffType||(isPersonnel(old)?'staff':'teacher'),payType:teacherDefault(old).type,payoutPeriod:old.payoutPeriod||'month',workDays:toList(old.workDays),active:String(isActiveRecord(old,'staff')),teacherCircles:Object.fromEntries(teacherCircles(old.id).map(circle=>[circle.id,assignmentOf(circle,old.id)]))}:old) : initialOverride || { date:today(),done:'false',role:kind==='staff'?'მასწავლებელი':'',active:kind==='staff'?'true':undefined,staffType:kind==='staff'?(staffTab==='personnel'?'staff':'teacher'):'',payType:kind==='staff'?(staffTab==='personnel'?'monthly':'percent'):'',revenueShare:kind==='staff'&&staffTab!=='personnel'?50:'',payoutPeriod:kind==='staff'?'month':'',billingType:kind==='clubs'?'monthly':'',weekdays:kind==='clubs'?[]:undefined,kindergartenRate:kind==='clubs'?30:'',externalRate:kind==='clubs'?40:'',status:kind==='attendance'?'present':'' });
   if (old && kind === 'attendance') {
     const actions=$('modalForm').querySelector('.form-actions');
     actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteAttendance('${esc(old.id)}')">წაშლა</button>`);
@@ -1388,7 +1403,7 @@ function editSimple(kind, id, initialOverride = null) {
     const payTypeSelect=$('field-payType');
     const show=(name,on)=>{ const node=$('modalForm').querySelector(`[name="${name}"]`)?.closest('.field'); if (node) node.hidden=!on; };
     const sync=()=>{ const personnel=typeSelect.value==='staff', t=payTypeSelect?.value||'monthly';
-      ['subjectIds','payType','workDays'].forEach(name=>show(name,!personnel));
+      ['payType','workDays'].forEach(name=>show(name,!personnel)); const tc=$('modalForm').querySelector('.tc-list')?.closest('.field'); if (tc) tc.hidden=personnel;
       show('monthlySalary',personnel||t==='monthly'||t==='mixed'); show('weeklyRate',!personnel&&t==='weekly');
       show('lessonRate',!personnel&&['per_lesson','per_child','per_day'].includes(t)); show('revenueShare',!personnel&&(t==='percent'||t==='mixed'));
       const role=$('field-role'); if (role&&!role.value) role.placeholder=personnel?'ბუღალტერი, დამლაგებელი…':'მასწავლებელი'; };
