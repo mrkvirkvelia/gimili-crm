@@ -59,6 +59,7 @@ function translateUi(root = document) {
 }
 
 const $ = id => document.getElementById(id);
+const jsq = value => esc(String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' '));
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 const money = value => `₾${Number(value || 0).toLocaleString("ka-GE", {maximumFractionDigits:2})}`;
 const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -68,6 +69,13 @@ function isActiveRecord(item, kind = '') {
   if (item.active === false || String(item.active).toLowerCase() === 'false') return false;
   if (item.active === true || String(item.active).toLowerCase() === 'true') return true;
   return kind !== 'children' || !['Пауза','Завершил','Неактивен'].includes(item.status);
+}
+// Was the record active at some point in [from, to]? Switched-off records still count for the months
+// before the date they were switched off (so old debts and old salaries do not disappear).
+function activeDuring(item, kind, from) {
+  if (isActiveRecord(item, kind)) return true;
+  const off = dateKey(item?.inactiveFrom);
+  return Boolean(off && from && off > from);
 }
 const activeLabel = (item, kind = '') => isActiveRecord(item, kind) ? 'აქტიური' : 'არააქტიური';
 const activePeople = (kind, rows = data[kind] || []) => rows.filter(item => isActiveRecord(item, kind));
@@ -173,7 +181,7 @@ function courseMonth(child, subject) {
 }
 const withStart = (child, ids) => { const starts = { ...(child?.activityStart || {}) }; ids.forEach(id => { if (!starts[id]) starts[id] = today(); }); return starts; };
 function billingRows(month = paymentMonth) {
-  return activePeople('children', data.children).flatMap(child => {
+  return data.children.filter(child => activeDuring(child, 'children', `${month}-01`)).flatMap(child => {
     const subjects = enrolledSubjects(child);
     const rows=subjects.filter(subject => !isCourseCircle(subject) || courseMonth(child,subject) === month).map(subject => ({child,subject,...subjectBill(child,subject,month)}));
     if (!usesBaseTariff(child)) return rows;
@@ -248,8 +256,11 @@ async function loadData() {
   const body = await api("/api/records");
   if (pendingOps.length || savingNow) return; // local edits still on the way — keep them on screen
   applySnapshot(body);
+  reapplyLocal(failedOps);
   writeCache();
   renderShell();
+  renderSyncBanner();
+  lastRefresh = Date.now();
   autoCreateParents().catch(error => toast(error.message));
 }
 function renderShell() {
@@ -271,10 +282,11 @@ async function boot() {
   const splashSafetyTimer = setTimeout(() => $("splash")?.classList.add("done"), 4500);
   if (!localStorage.getItem('gimili_crm_session') && window.GIMILI_API_URL) { location.replace('./login.html'); return; }
   const cached = readCache();
-  if (cached?.user) { applySnapshot(cached); renderShell(); $("splash")?.classList.add("done"); }
+  if (cached?.user) { applySnapshot(cached); reapplyLocal(failedOps); renderShell(); renderSyncBanner(); $("splash")?.classList.add("done"); }
   try {
     await loadData();
     $("splash")?.classList.add("done");
+    if (failedOps.length) setTimeout(retryFailed, 800);
   }
   catch (error) {
     if (error.status === 401) { try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem('gimili_crm_session'); } catch (_) {} location.replace('./login.html'); return; }
@@ -298,14 +310,29 @@ async function boot() {
 // Writes are applied on screen immediately and sent to the sheet in the background.
 // Several quick changes are sent together in one request.
 let pendingOps = [], savingNow = false, batchSupported = true;
+// Changes that could not be saved stay on this device (never silently lost) until they are saved or discarded.
+const FAILED_KEY = 'gimili_failed_ops_v1';
+let failedOps = (() => { try { return JSON.parse(localStorage.getItem(FAILED_KEY) || '[]'); } catch (_) { return []; } })();
+let lastSaveError = '';
+function persistFailed() { try { failedOps.length ? localStorage.setItem(FAILED_KEY, JSON.stringify(failedOps)) : localStorage.removeItem(FAILED_KEY); } catch (_) {} renderSyncBanner(); }
 function newId(kind) { return `${kind}-${(crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c === 'x' ? r : (r&3|8)).toString(16); }))}`; }
 function setSavingIndicator() { document.body.classList.toggle('saving', savingNow || pendingOps.length > 0); }
 function queueOp(op) { pendingOps.push(op); setSavingIndicator(); writeCache(); flushOps(); }
+const stripId = ({ id: _, ...rest }) => rest;
+// Updates carry only the fields that were changed. Before sending, they are laid over the freshest copy
+// from the sheet, so an edit on one device does not wipe out another device's edit of other fields.
+async function freshenUpdates(ops) {
+  const updates = ops.filter(op => op.action === 'update');
+  if (!updates.length || serverVersion >= 5) return;
+  const body = await api('/api/records');
+  updates.forEach(op => { const server = (body.records?.[op.kind] || []).find(item => item.id === op.id); if (server) op.record = { ...stripId(server), ...op.patch }; });
+}
 async function flushOps() {
   if (savingNow || !pendingOps.length) return;
   savingNow = true; setSavingIndicator();
   const ops = pendingOps.splice(0, 40);
   try {
+    await freshenUpdates(ops);
     if (ops.length > 1 && batchSupported) {
       try {
         const result = await api('/api/batch', { method: 'POST', body: JSON.stringify({ ops }) });
@@ -318,20 +345,54 @@ async function flushOps() {
       }
     } else for (const op of ops) await sendOp(op);
   } catch (error) {
-    pendingOps = [];
-    toast(`შენახვა ვერ მოხერხდა: ${error.message}. მონაცემები განახლდება.`);
-    savingNow = false; setSavingIndicator();
-    try { await loadData(); } catch (_) {}
+    failedOps.push(...ops, ...pendingOps.splice(0));
+    lastSaveError = error.status === 401 ? 'სესია დასრულდა — შედით ხელახლა' : (error.message || 'ინტერნეტთან კავშირი');
+    savingNow = false; setSavingIndicator(); persistFailed(); writeCache();
+    toast(`შენახვა ვერ მოხერხდა — ცვლილებები ამ მოწყობილობაზე დარჩა`);
     return;
   }
   savingNow = false; setSavingIndicator();
-  if (pendingOps.length) flushOps(); else writeCache();
+  if (pendingOps.length) flushOps(); else { writeCache(); scheduleRefresh(1500); }
 }
 async function sendOp(op) {
   if (op.action === 'create') return api('/api/records', { method: 'POST', body: JSON.stringify({ kind: op.kind, record: op.record, id: op.id }) });
-  if (op.action === 'update') return api('/api/records', { method: 'PUT', body: JSON.stringify({ id: op.id, kind: op.kind, record: op.record }) });
+  if (op.action === 'update') return api('/api/records', { method: 'PUT', body: JSON.stringify({ id: op.id, kind: op.kind, record: op.record, patch: op.patch }) });
   if (op.action === 'delete') return api('/api/records', { method: 'DELETE', body: JSON.stringify({ kind: op.kind, id: op.id }) });
 }
+function retryFailed() { if (!failedOps.length) return; pendingOps.unshift(...failedOps.splice(0)); lastSaveError = ''; persistFailed(); flushOps(); }
+function discardFailed() {
+  if (!confirm(`წავშალოთ ${failedOps.length} შეუნახავი ცვლილება? ისინი აღარ შეინახება.`)) return;
+  failedOps = []; lastSaveError = ''; persistFailed(); refreshData(true);
+}
+// keep unsaved local changes visible on top of a fresh copy from the sheet
+function reapplyLocal(ops) {
+  ops.forEach(op => {
+    const list = data[op.kind] || (data[op.kind] = []);
+    const index = list.findIndex(item => item.id === op.id);
+    if (op.action === 'create') { if (index < 0) list.unshift({ ...op.record, id: op.id }); }
+    else if (op.action === 'update') { if (index >= 0) list[index] = { ...list[index], ...(op.patch || op.record), id: op.id }; }
+    else if (op.action === 'delete') { if (index >= 0) list.splice(index, 1); }
+  });
+  sortChildren();
+}
+function renderSyncBanner() {
+  let bar = document.getElementById('syncBanner');
+  if (!failedOps.length) { bar?.remove(); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'syncBanner'; bar.className = 'sync-banner'; bar.setAttribute('role', 'alert'); document.body.appendChild(bar); }
+  const relogin = /სესია/.test(lastSaveError);
+  bar.innerHTML = `<span>⚠ ${failedOps.length} ცვლილება არ არის შენახული${lastSaveError ? ` · ${esc(lastSaveError)}` : ''}</span>${relogin ? '<a class="btn small" href="./login.html">შესვლა</a>' : '<button class="btn small" type="button" onclick="retryFailed()">ხელახლა ცდა</button>'}<button class="btn small secondary" type="button" onclick="discardFailed()">გაუქმება</button>`;
+}
+// fresh data: when coming back to the tab, after saving, and every few minutes
+let refreshTimer = null, lastRefresh = Date.now(), refreshing = false;
+function scheduleRefresh(ms) { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => refreshData(), ms); }
+async function refreshData(force = false) {
+  if (refreshing || !signedInUser || (!force && (pendingOps.length || savingNow))) return;
+  refreshing = true;
+  try { await loadData(); lastRefresh = Date.now(); } catch (_) {} finally { refreshing = false; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (failedOps.length && !/სესია/.test(lastSaveError)) retryFailed(); if (Date.now() - lastRefresh > 30000) refreshData(); } });
+setInterval(() => { if (document.visibilityState === 'visible' && Date.now() - lastRefresh > 180000) refreshData(); }, 60000);
+window.addEventListener('online', () => { if (failedOps.length) retryFailed(); });
 window.addEventListener('beforeunload', event => { if (savingNow || pendingOps.length) { event.preventDefault(); event.returnValue = ''; } });
 
 const dataAdapter = {
@@ -357,9 +418,11 @@ const dataAdapter = {
     }
     data[kind][data[kind].findIndex(x => x.id === id)] = item;
     if (kind === 'children' && old.name !== item.name) sortChildren();
+    const changed = { ...patch }; if (kind === 'children') changed.manualOverrides = item.manualOverrides;
     const queued = pendingOps.find(op => op.kind === kind && op.id === id && op.action !== 'delete');
-    if (queued) queued.record = queued.action === 'create' ? (({id: _, ...rest}) => rest)(item) : item; // merge into the waiting change
-    else queueOp({ action: 'update', kind, id, record: item });
+    if (queued && queued.action === 'create') queued.record = stripId(item); // not sent yet: send the whole new record
+    else if (queued) { queued.record = item; queued.patch = { ...(queued.patch || {}), ...changed }; }
+    else queueOp({ action: 'update', kind, id, record: item, patch: changed });
     return item;
   },
   async remove(kind, id) {
@@ -529,7 +592,7 @@ function workedWeeks(subjects, range) {
 }
 const circleRevenue = (subject, range) => data.payments.filter(item => item.subjectId === subject.id && inRange(item.date, range)).reduce((sum, item) => sum + number(item.amount), 0);
 function ruleAccrual(rule, subjects, range, months, person) {
-  const active = isActiveRecord(person, 'staff');
+  const active = activeDuring(person, 'staff', range.from);
   const revenue = () => subjects.reduce((sum, subject) => sum + circleRevenue(subject, range), 0);
   const acts = () => subjects.map(subject => circleActivity(subject, range));
   switch (rule.type) {
@@ -551,7 +614,7 @@ const circlePercent = (asg, subject) => asg?.percent ?? optNumber(subject?.teach
 function teacherAccrualBreakdown(person, range, months) {
   const circles = teacherCircles(person.id), lines = [];
   const garden = circles.filter(subject => circleSection(subject) === 'garden');
-  if (garden.length) lines.push({ section: 'garden', subjects: garden, label: number(person.monthlySalary) ? `${money(person.monthlySalary)} / თვე` : 'ხელფასი დასაზუსტებელია', amount: isActiveRecord(person,'staff') ? number(person.monthlySalary) * months : 0 });
+  if (garden.length) lines.push({ section: 'garden', subjects: garden, label: number(person.monthlySalary) ? `${money(person.monthlySalary)} / თვე` : 'ხელფასი დასაზუსტებელია', amount: activeDuring(person,'staff',range.from) ? number(person.monthlySalary) * months : 0 });
   circles.filter(subject => circleSection(subject) === 'circles').forEach(subject => {
     const pct = circlePercent(assignmentOf(subject, person.id), subject);
     lines.push({ section: 'circles', subject, label: `${pct}% მიღებული თანხიდან`, amount: circleRevenue(subject, range) * pct / 100 });
@@ -599,7 +662,7 @@ const isPersonnel = person => person?.staffType ? person.staffType === 'staff' :
 const teacherStaff = (rows = data.staff) => rows.filter(person => !isPersonnel(person));
 const personnelStaff = (rows = data.staff) => rows.filter(isPersonnel);
 function personAccrued(person, range, months) {
-  if (isPersonnel(person)) return isActiveRecord(person,'staff') ? number(person.monthlySalary) * months : 0;
+  if (isPersonnel(person)) return activeDuring(person,'staff',range.from) ? number(person.monthlySalary) * months : 0;
   return teacherAccrualBreakdown(person, range, months).reduce((sum, line) => sum + line.amount, 0);
 }
 const isSalaryExpense = item => expenseCategoryLabel(item.category) === 'ხელფასები';
@@ -1260,7 +1323,7 @@ function scheduleForm(id) {
   },old||{date:calendarSelected,status:'planned'});
   if (old) {
     const actions=$('modalForm').querySelector('.form-actions');
-    actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('schedule','${esc(old.id)}','${esc(old.name||'გაკვეთილი')}','schedule')">წაშლა</button>`);
+    actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('schedule','${esc(old.id)}','${jsq(old.name||'გაკვეთილი')}','schedule')">წაშლა</button>`);
   }
 }
 
@@ -1605,6 +1668,8 @@ function childForm(id) {
   const fields = [...childFields.slice(0, 6), {name:'activityIds',label:'Предметы (можно выбрать несколько)',type:'multi',options:data.clubs.filter(a => !isEvent(a) || toList(old?.activityIds).includes(a.id)).map(a => [a.id,a.name])}, ...childFields.slice(6)];
   openForm(old ? 'Карточка ребёнка' : 'Новый ребёнок', fields, async values => {
     values.active = values.active !== 'false';
+    if (old && isActiveRecord(old,'children') && !values.active) values.inactiveFrom = today();
+    if (values.active) values.inactiveFrom = '';
     values.status = values.active ? 'Активен' : 'Неактивен';
     values.paymentDay = values.paymentDay ? day(values.paymentDay) : null;
     values.tariff = values.tariff === '' ? null : number(values.tariff);
@@ -1683,7 +1748,7 @@ function leadForm(id) {
     if (old) await dataAdapter.update('leads', id, values); else await dataAdapter.create('leads', values);
     go('leads'); toast('Заявка сохранена');
   }, old ? {...old,active:String(isActiveRecord(old,'leads'))} : { date: today(), stage: 'new',active:'true' });
-  if (old) $('modalForm').querySelector('.form-actions')?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('leads','${esc(old.id)}','${esc(old.name||'')}','leads')">წაშლა</button>`);
+  if (old) $('modalForm').querySelector('.form-actions')?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('leads','${esc(old.id)}','${jsq(old.name||'')}','leads')">წაშლა</button>`);
 }
 async function moveLead(id, stage) { try { await dataAdapter.update('leads', id, {stage}); go('leads'); } catch(error) { toast(error.message); } }
 async function toggleTask(id) { const old = get('tasks', id); if (!old) return; try { await dataAdapter.update('tasks', id, {done: !old.done}); go('tasks'); } catch(error) { toast(error.message); } }
@@ -1743,7 +1808,7 @@ function editSimple(kind, id, initialOverride = null) {
     if (kind === 'tasks') values.done = values.done === 'true';
     if (['expenses','attendance'].includes(kind)) { if (old) assertOpen(old.date); assertOpen(values.date); }
     let staffSubjects=null;
-    if (kind === 'staff') { if (values.staffType==='staff') { values.payType='monthly'; values.teacherCircles={}; } staffSubjects=values.teacherCircles||{}; delete values.teacherCircles; if (!values.role.trim()) values.role = values.staffType==='staff' ? 'პერსონალი' : 'მასწავლებელი'; values.active=values.active!=='false'; ['lessonRate','revenueShare','monthlySalary','weeklyRate'].forEach(key=>values[key]=number(values[key])); if (values.revenueShare<0||values.revenueShare>100) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); values.workDays=(values.workDays||[]).map(Number); }
+    if (kind === 'staff') { if (values.staffType==='staff') { values.payType='monthly'; values.teacherCircles={}; } staffSubjects=values.teacherCircles||{}; delete values.teacherCircles; if (!values.role.trim()) values.role = values.staffType==='staff' ? 'პერსონალი' : 'მასწავლებელი'; values.active=values.active!=='false'; if (old && isActiveRecord(old,'staff') && !values.active) values.inactiveFrom=today(); if (values.active) values.inactiveFrom=''; ['lessonRate','revenueShare','monthlySalary','weeklyRate'].forEach(key=>values[key]=number(values[key])); if (values.revenueShare<0||values.revenueShare>100) throw new Error('პროცენტი უნდა იყოს 0-დან 100-მდე'); values.workDays=(values.workDays||[]).map(Number); }
     if (kind === 'expenses') { values.amount = number(values.amount); if (initialOverride?.sourceRow) Object.assign(values, {sourceRow:initialOverride.sourceRow,sourceColumn:initialOverride.sourceColumn,sourceRaw:initialOverride.sourceRaw}); if (initialOverride?.staffId) values.staffId=initialOverride.staffId; else if (old?.staffId) values.staffId=old.staffId; if (initialOverride?.eventId) values.eventId=initialOverride.eventId; else if (old?.eventId) values.eventId=old.eventId; }
     if (kind === 'clubs') { values.appointmentOnly=values.appointmentOnly==='true'; values.coursePrice=optNumber(values.coursePrice); values.tariffOptions=String(values.tariffOptions||'').split(/[,;\s]+/).map(Number).filter(n=>Number.isFinite(n)&&n>0); if (!values.tariff&&values.tariffOptions.length) values.tariff=values.tariffOptions[0]; values.assignments=(values.assignments||[]).map(item=>values.section==='garden'?{...item,payType:'',amount:null,percent:null}:values.section==='circles'?{...item,payType:'percent',amount:null}:item); Object.assign(values, assignmentFields(values.assignments)); if (values.section==='circles') values.teacherPercent=values.assignments[0]?.percent??50; values.weekdays=(values.weekdays||[]).map(Number); values.timeSlots=String(values.timeSlots||'').split(',').map(value=>value.trim()).filter(Boolean); values.tariff = values.tariff === '' ? null : number(values.tariff); values.lessonRate=values.lessonRate===''?null:number(values.lessonRate); if ('kindergartenRate' in values) values.kindergartenRate=values.kindergartenRate===''?30:number(values.kindergartenRate); if ('externalRate' in values) values.externalRate=values.externalRate===''?40:number(values.externalRate); }
     if (kind === 'attendance') { const child=get('children',values.childId); values.name=child?.name||''; if (!old&&data.attendance.some(item=>item.childId===values.childId&&item.subjectId===values.subjectId&&dateKey(item.date)===values.date)) throw new Error('ამ ბავშვის დასწრება ამ დღისთვის უკვე მონიშნულია'); }
@@ -1766,7 +1831,7 @@ function editSimple(kind, id, initialOverride = null) {
   }
   if (old && ['expenses','tasks','schedule'].includes(kind)) {
     const actions=$('modalForm').querySelector('.form-actions');
-    actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('${esc(kind)}','${esc(old.id)}','${esc(old.title||old.name||old.date||'ჩანაწერი')}','${kind==='schedule'?'schedule':kind}')">წაშლა</button>`);
+    actions?.insertAdjacentHTML('afterbegin',`<button class="btn danger" type="button" onclick="deleteRecord('${esc(kind)}','${esc(old.id)}','${jsq(old.title||old.name||old.date||'ჩანაწერი')}','${kind==='schedule'?'schedule':kind}')">წაშლა</button>`);
   }
   if (kind === 'clubs') {
     const billing=$('field-billingType');

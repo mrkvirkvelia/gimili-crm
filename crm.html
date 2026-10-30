@@ -58,7 +58,8 @@
     .today-list.collapsed>.today-payment:nth-child(n+6){display:none}.show-more{width:100%;margin-top:10px;justify-content:center}
     .card-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
     button.row{width:100%;text-align:left;font:inherit;color:inherit;min-width:0}.list{grid-template-columns:minmax(0,1fr)}.row-body{min-width:0}.lesson-row .badge{flex:none}
-    @media(min-width:1024px){
+    .sync-banner{position:fixed;left:8px;right:8px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:120;display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff3ef;border:1px solid #f3c3b6;color:#a3341f;border-radius:14px;padding:10px 12px;font-weight:700;box-shadow:0 10px 26px rgba(120,40,20,.15)}.sync-banner span{flex:1 1 200px}
+    @media(min-width:1024px){.sync-banner{left:280px;right:24px;bottom:20px}
       body{background:var(--sky2)}
       .app{padding:0 0 32px 268px}
       .topbar,.nav{display:none}
@@ -136,5 +137,5 @@
   <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="requestCloseModal()" aria-label="დახურვა">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261031-events" defer></script>
+<script src="./crm.js?v=20261031-review" defer></script>
 </body></html>
