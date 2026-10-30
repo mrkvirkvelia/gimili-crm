@@ -29,11 +29,12 @@
   <script>
     const form=document.getElementById('loginForm'),button=document.getElementById('submit'),error=document.getElementById('error'),passwordInput=form.password;
     document.getElementById('eye').addEventListener('click',()=>{passwordInput.type=passwordInput.type==='password'?'text':'password';passwordInput.focus();});
+    const deviceId=(()=>{try{let id=localStorage.getItem('gimili_device_id');if(!id){id=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));localStorage.setItem('gimili_device_id',id);}return id;}catch(_){return '';}})();
     form.addEventListener('submit',async event=>{
       event.preventDefault();error.textContent='';button.disabled=true;button.textContent='მოწმდება…';
       try{
         if(!window.GIMILI_API_URL)throw new Error('CRM API ჯერ არ არის დაყენებული');
-        const response=await fetch(window.GIMILI_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',password:passwordInput.value})});
+        const response=await fetch(window.GIMILI_API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'login',password:passwordInput.value,deviceId})});
         const body=await response.json().catch(()=>({}));
         if(!body.ok)throw new Error(body.error==='Неверный пароль.'?'პაროლი არასწორია':body.error||'შესვლა ვერ მოხერხდა');
         localStorage.setItem('gimili_crm_session',body.token);localStorage.setItem('gimili_crm_user',JSON.stringify(body.user||{}));
