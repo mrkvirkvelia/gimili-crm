@@ -155,7 +155,7 @@ function billingDate(child, month) {
 }
 // ---------- Sections: kindergarten / circles / specialists ----------
 const SECTIONS = [['garden','ბაღი'],['circles','წრეები'],['specialists','სპეციალისტები']];
-const gardenNames = /მინი.?ბაღი|შაბათის ბაღი|ინგლისური კლუბ|ბაღის ინგლისური|мини.?сад/i;
+const gardenNames = /მინი.?ბაღი|ბაღის ინგლისური|мини.?сад/i; // kindergarten: mini-kindergarten groups and kindergarten English only
 const specialistNames = /ლოგოპედ|ტომატის|tomatis|томатис|логопед/i;
 const circleSection = subject => ['garden','circles','specialists'].includes(subject?.section) ? subject.section : gardenNames.test(subject?.name || '') ? 'garden' : specialistNames.test(subject?.name || '') ? 'specialists' : 'circles';
 const sectionLabel = key => (SECTIONS.find(item => item[0] === key) || ['', ''])[1];
