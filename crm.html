@@ -93,6 +93,16 @@
       .asg-list{display:grid;gap:10px}.asg-row{display:grid;gap:8px;padding:10px;border:1px solid var(--line);border-radius:16px;background:#fff}.asg-nums{display:flex;gap:8px}.asg-nums input{flex:1;min-width:0}.asg-nums input[hidden]{display:none}.asg-remove{flex:none;margin:0}.asg-add{margin-top:8px}
     .pay-lines{display:grid;gap:6px}.pay-lines button{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);background:#f8fbfd;border-radius:14px;padding:9px 12px;text-align:left;font:inherit;color:inherit}.pay-lines span{display:flex;flex-direction:column;min-width:0}.pay-lines small{color:var(--muted);font-size:12px}.pay-lines strong{white-space:nowrap}
     .teacher-week{display:grid;gap:4px}.teacher-week div{display:grid;grid-template-columns:44px 1fr;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}.teacher-week b{color:var(--blue)}
+      .tc-list{display:grid;gap:14px}.tc-group{display:grid;gap:8px}.tc-group-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:0 2px}.tc-group-head small{color:var(--muted);font-size:12px}
+    .tc-row{border:1px solid var(--line);border-radius:14px;background:#fff;padding:10px 12px;display:grid;gap:8px}.tc-row.on{border-color:var(--blue);background:#f2f8ff}
+    .tc-head{display:flex;gap:10px;align-items:flex-start;margin:0;font-weight:600;cursor:pointer}.tc-head input{width:22px;height:22px;flex:none;margin-top:2px}.tc-head span{display:flex;flex-direction:column;min-width:0}.tc-head small{color:var(--muted);font-weight:500;font-size:12px}
+    .tc-rule{display:grid;gap:8px}.tc-rule[hidden]{display:none}.asg-nums .unit{align-self:center;font-weight:800;color:var(--muted)}
+    select[hidden],input[hidden]{display:none!important}
+    .sec-tag{display:inline-block;width:max-content;font-size:11px!important;font-weight:800;border-radius:6px;padding:1px 6px;margin-bottom:2px}.sec-garden{background:#fff3cd;color:#8a5a00!important}.sec-circles{background:#e6f0ff;color:#1554b3!important}.sec-specialists{background:#efe8ff;color:#5b3bc4!important}
+    .pay-total{display:flex;justify-content:space-between;padding:8px 12px;font-weight:800}
+    .section-tabs{margin-bottom:12px}.section-sum{margin-bottom:10px}
+    .table-wrap{overflow-x:auto}.sec-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.sec-table th,.sec-table td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.sec-table th:first-child{text-align:left}.sec-table thead th{font-size:12px;color:var(--muted)}.sec-table tr.sub th{font-weight:600;color:var(--muted)}.sec-table tr.total th,.sec-table tr.total td{font-weight:900;border-bottom:0}
+      .tc-row label.tc-head{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;margin:0!important}.tc-row .tc-head input[type=checkbox]{width:22px!important;height:22px!important;min-height:0!important;flex:none;margin:0;padding:0}
   </style>
 </head>
 <body>
@@ -114,5 +124,5 @@
   <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="closeModal()">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261030-name" defer></script>
+<script src="./crm.js?v=20261030-sections" defer></script>
 </body></html>
