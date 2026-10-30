@@ -110,6 +110,8 @@
     .visit-total{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;background:#eaf8ef;font-weight:800}.visit-total strong{font-size:20px}.visit-total small{color:var(--muted);font-weight:600}
       .subject-list{grid-template-columns:minmax(0,1fr)}.subject-line{min-width:0}.subject-line-bottom{flex-wrap:wrap;justify-content:flex-start;gap:8px}.subject-line-bottom .btn:last-child{margin-left:auto}
       button.bill-day{border:0;font:inherit;cursor:pointer;position:relative}button.bill-day i{position:absolute;top:2px;right:5px;font-style:normal;font-size:12px}.billing-month{flex-wrap:wrap}
+      .family-debt{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:12px;font-weight:800}.family-debt.due{background:#fff3ef;color:#a3341f}.family-debt.ok{background:#e9f8ef;color:#176a39}
+    a.tel{color:var(--blue);font-weight:700;text-decoration:none}.parent-card .teacher-top{align-items:center}
   </style>
 </head>
 <body>
@@ -131,5 +133,5 @@
   <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="closeModal()">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261030-dropin" defer></script>
+<script src="./crm.js?v=20261030-parents" defer></script>
 </body></html>

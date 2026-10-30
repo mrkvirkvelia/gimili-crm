@@ -1,5 +1,5 @@
 // Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia
-const sections = ["closings", "children", "staff", "leads", "payments", "expenses", "tasks", "groups", "clubs", "schedule", "attendance"];
+const sections = ["closings", "parents", "children", "staff", "leads", "payments", "expenses", "tasks", "groups", "clubs", "schedule", "attendance"];
 let data = Object.fromEntries(sections.map(key => [key, []]));
 let sourceRows = [];
 let signedInUser = null;
@@ -244,6 +244,7 @@ async function loadData() {
   applySnapshot(body);
   writeCache();
   renderShell();
+  autoCreateParents().catch(error => toast(error.message));
 }
 function renderShell() {
   $("role").textContent = "სამუშაო კაბინეტი";
@@ -753,7 +754,7 @@ function childProfile() {
   const childPayments=[...data.payments].filter(item=>item.childId===c.id).sort((a,b)=>dateKey(b.date).localeCompare(dateKey(a.date))).slice(0,8);
   const childAttendance=[...data.attendance].filter(item=>item.childId===c.id||(!item.childId&&item.name===c.name)).sort((a,b)=>dateKey(b.date).localeCompare(dateKey(a.date))).slice(0,8);
   const activityHistory=`<section class="section card"><div class="section-title"><h2>ისტორია</h2><button class="btn small secondary" onclick="paymentForm('${esc(c.id)}')">＋ გადახდა</button></div>${childPayments.length?`<h3 class="history-title">გადახდები</h3><div class="compact-history">${childPayments.map(item=>`<button onclick="paymentForm('${esc(c.id)}','${esc(item.id)}')"><span><b>${esc(item.subjectId?subjectName(item.subjectId):'საერთო გადახდა')}</b><small>${esc(dateKey(item.date)||'თარიღი არ არის')} · ${esc(paymentMethodLabel(item.method))}${item.billingMonth&&monthKey(item.billingMonth)!==monthKey(item.date)?` · ${esc(prettyMonth(monthKey(item.billingMonth)))}-ისთვის`:''}${childPayments.filter(other=>other!==item&&(other.subjectId||'')===(item.subjectId||'')&&monthKey(other.billingMonth||other.date)===monthKey(item.billingMonth||item.date)).length?' · <b class="danger-text">ამ თვეში ორჯერ</b>':''}</small></span><strong>${money(item.amount)}</strong></button>`).join('')}</div>`:'<p class="meta">გადახდების ისტორია ჯერ არ არის.</p>'}${childAttendance.length?`<h3 class="history-title">დასწრება</h3><div class="compact-history">${childAttendance.map(item=>`<button onclick="editSimple('attendance','${esc(item.id)}')"><span><b>${esc(subjectName(item.subjectId))}</b><small>${esc(dateKey(item.date)||'თარიღი არ არის')}</small></span><strong>${esc(attendanceStatusLabel(item.status))}</strong></button>`).join('')}</div>`:''}</section>`;
-  return `${head('ბავშვის ბარათი','ბავშვები / პროფილი',`<button class="btn small" onclick="childForm('${esc(c.id)}')">შეცვლა</button>`)}<button class="text-back" onclick="go('children')">← ყველა ბავშვი</button><section class="profile-hero ${isActiveRecord(c,'children')?'':'record-inactive'}"><div class="profile-avatar">${esc((c.name||'?').slice(0,1))}</div><div class="profile-identity"><h2>${esc(c.name)}</h2><span>${activeLabel(c,'children')}</span></div><button class="record-switch hero-switch ${isActiveRecord(c,'children')?'on':'off'}" onclick="toggleRecordActive('children','${esc(c.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${isActiveRecord(c,'children')?'გამორთვა':'ჩართვა'}</span></button></section>${oldDebtsBlock(c.id)}${legacyPaymentCard}<section class="section card"><div class="section-title"><h2>წრეები · ${subjects.length}</h2><button class="btn small secondary" onclick="go('clubs')">ყველა წრე →</button></div><div class="billing-month"><span>${esc(prettyMonth(paymentMonth))}</span><button class="btn small secondary" onclick="paymentDayForm('${esc(c.id)}','${paymentMonth}')">გადახდის დღე: ${paymentDayFor(c,paymentMonth)||'?'}${(c.paymentDayOverrides||{})[paymentMonth]?' *':''} ✎</button><button class="btn small secondary" onclick="shiftPaymentMonth(-1)">‹</button><button class="btn small secondary" onclick="shiftPaymentMonth(1)">›</button></div>${subjects.length?`<div class="subject-list">${subjects.map(subject=>{const bill=subjectBill(c,subject),complete=paidStatus(bill.status);return `<div class="subject-line ${complete?'bill-paid':''}"><div class="subject-line-head"><div><b>${esc(subject.name)}</b><small>${esc(teacherName(subject))}</small></div><span class="pay-status ${complete?'paid':bill.status==='Частично'?'partial':'due'}">${billStatusLabel(bill.status)}</span></div>${circleChargeMeta(c,subject,bill,paymentMonth)}<div class="subject-line-bottom">${circlePriceControl(c,subject,bill)}${isFlexibleCircle(subject)&&childBillingMode(c,subject)==='per_lesson'?`<button class="btn small secondary" onclick="dropInForm('${esc(c.id)}','${esc(subject.id)}')">＋ ვიზიტი</button>`:''}${hasVisitCalendar(subject,c)?`<button class="btn small secondary" onclick="visitCalendarMonth=null;visitCalendar('${esc(c.id)}','${esc(subject.id)}')">📅 დასწრება · ${childVisits(c.id,subject.id,paymentMonth).length}</button>`:''}<button class="btn small secondary" onclick="if(confirm('მოვხსნათ ბავშვი წრიდან „${esc(subject.name).replace(/'/g,'')}“? ისტორია შენარჩუნდება.'))toggleChildActivity('${esc(c.id)}','${esc(subject.id)}')">✕ მოხსნა</button>${bill.remaining>0&&isActiveRecord(c,'children')?`<button class="btn small" onclick="paymentForSubject('${esc(c.id)}','${esc(subject.id)}')">გადახდა ${money(bill.remaining)}</button>`:''}</div></div>`}).join('')}</div><p class="section-note" style="margin-top:12px">${isActiveRecord(c,'children')?`ამ თვეში დარჩენილი გადასახდელი: <b>${money(due)}</b>. ერთჯერადი მომსახურება ითვლება მხოლოდ დასწრებული ჩანაწერებით.`:'ბავშვი არააქტიურია — ახალი დარიცხვები და დასწრება გამორთულია. ისტორია შენარჩუნებულია.'}</p>`:'<p class="section-note">წრე ჯერ არ არის მინიჭებული. აირჩიეთ ქვემოთ.</p>'}<div class="activity-grid">${data.clubs.filter(a=>!enrolled.has(a.id)).map(a=>`<button class="activity-choice" onclick="toggleChildActivity('${esc(c.id)}','${esc(a.id)}')"><span>＋</span>${esc(a.name)}</button>`).join('')}</div>${c.clubs?`<p class="meta">ძველი ჩანაწერი: ${esc(c.clubs)}</p>`:''}</section><section class="section card"><div class="section-title"><h2>პირადი მონაცემები</h2></div><div class="profile-details">${details.map(([label,value])=>`<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`).join('')}</div>${c.comment?`<p class="profile-comment">${esc(c.comment)}</p>`:''}</section>${activityHistory}`;
+  return `${head('ბავშვის ბარათი','ბავშვები / პროფილი',`<button class="btn small" onclick="childForm('${esc(c.id)}')">შეცვლა</button>`)}<button class="text-back" onclick="go('children')">← ყველა ბავშვი</button><section class="profile-hero ${isActiveRecord(c,'children')?'':'record-inactive'}"><div class="profile-avatar">${esc((c.name||'?').slice(0,1))}</div><div class="profile-identity"><h2>${esc(c.name)}</h2><span>${activeLabel(c,'children')}</span></div><button class="record-switch hero-switch ${isActiveRecord(c,'children')?'on':'off'}" onclick="toggleRecordActive('children','${esc(c.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${isActiveRecord(c,'children')?'გამორთვა':'ჩართვა'}</span></button></section>${oldDebtsBlock(c.id)}${parentsBlock(c)}${legacyPaymentCard}<section class="section card"><div class="section-title"><h2>წრეები · ${subjects.length}</h2><button class="btn small secondary" onclick="go('clubs')">ყველა წრე →</button></div><div class="billing-month"><span>${esc(prettyMonth(paymentMonth))}</span><button class="btn small secondary" onclick="paymentDayForm('${esc(c.id)}','${paymentMonth}')">გადახდის დღე: ${paymentDayFor(c,paymentMonth)||'?'}${(c.paymentDayOverrides||{})[paymentMonth]?' *':''} ✎</button><button class="btn small secondary" onclick="shiftPaymentMonth(-1)">‹</button><button class="btn small secondary" onclick="shiftPaymentMonth(1)">›</button></div>${subjects.length?`<div class="subject-list">${subjects.map(subject=>{const bill=subjectBill(c,subject),complete=paidStatus(bill.status);return `<div class="subject-line ${complete?'bill-paid':''}"><div class="subject-line-head"><div><b>${esc(subject.name)}</b><small>${esc(teacherName(subject))}</small></div><span class="pay-status ${complete?'paid':bill.status==='Частично'?'partial':'due'}">${billStatusLabel(bill.status)}</span></div>${circleChargeMeta(c,subject,bill,paymentMonth)}<div class="subject-line-bottom">${circlePriceControl(c,subject,bill)}${isFlexibleCircle(subject)&&childBillingMode(c,subject)==='per_lesson'?`<button class="btn small secondary" onclick="dropInForm('${esc(c.id)}','${esc(subject.id)}')">＋ ვიზიტი</button>`:''}${hasVisitCalendar(subject,c)?`<button class="btn small secondary" onclick="visitCalendarMonth=null;visitCalendar('${esc(c.id)}','${esc(subject.id)}')">📅 დასწრება · ${childVisits(c.id,subject.id,paymentMonth).length}</button>`:''}<button class="btn small secondary" onclick="if(confirm('მოვხსნათ ბავშვი წრიდან „${esc(subject.name).replace(/'/g,'')}“? ისტორია შენარჩუნდება.'))toggleChildActivity('${esc(c.id)}','${esc(subject.id)}')">✕ მოხსნა</button>${bill.remaining>0&&isActiveRecord(c,'children')?`<button class="btn small" onclick="paymentForSubject('${esc(c.id)}','${esc(subject.id)}')">გადახდა ${money(bill.remaining)}</button>`:''}</div></div>`}).join('')}</div><p class="section-note" style="margin-top:12px">${isActiveRecord(c,'children')?`ამ თვეში დარჩენილი გადასახდელი: <b>${money(due)}</b>. ერთჯერადი მომსახურება ითვლება მხოლოდ დასწრებული ჩანაწერებით.`:'ბავშვი არააქტიურია — ახალი დარიცხვები და დასწრება გამორთულია. ისტორია შენარჩუნებულია.'}</p>`:'<p class="section-note">წრე ჯერ არ არის მინიჭებული. აირჩიეთ ქვემოთ.</p>'}<div class="activity-grid">${data.clubs.filter(a=>!enrolled.has(a.id)).map(a=>`<button class="activity-choice" onclick="toggleChildActivity('${esc(c.id)}','${esc(a.id)}')"><span>＋</span>${esc(a.name)}</button>`).join('')}</div>${c.clubs?`<p class="meta">ძველი ჩანაწერი: ${esc(c.clubs)}</p>`:''}</section><section class="section card"><div class="section-title"><h2>პირადი მონაცემები</h2></div><div class="profile-details">${details.map(([label,value])=>`<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`).join('')}</div>${c.comment?`<p class="profile-comment">${esc(c.comment)}</p>`:''}</section>${activityHistory}`;
 }
 // ---------- Visit calendar (craft, Saturday kindergarten): each marked day = one paid visit ----------
 const hasVisitCalendar = (subject, child = null) => isCraftCircle(subject) || /შაბათის ბაღი/i.test(String(subject?.name || '')) || (isFlexibleCircle(subject) && child && childBillingMode(child, subject) === 'per_lesson');
@@ -882,6 +883,89 @@ function editCircleBilling(childId, subjectId) {
   },{billingMode:mode,price:defaultPrice});
 }
 
+// ---------- Parents: own card (name, phones), linked to one or more children ----------
+const phoneKey = value => String(value || '').replace(/\D/g, '').slice(-9);
+const childParentIds = child => toList(child?.parentIds);
+const parentChildren = parentId => data.children.filter(child => childParentIds(child).includes(parentId));
+const childParents = child => childParentIds(child).map(id => get('parents', id)).filter(Boolean);
+function familyDebt(parentId) {
+  const kids = parentChildren(parentId), ids = new Set(kids.map(child => child.id));
+  const current = billingRows(todayMonth()).filter(row => ids.has(row.child.id)).reduce((sum, row) => sum + number(row.remaining), 0);
+  const old = kids.reduce((sum, child) => sum + oldDebts(child.id).reduce((a, bill) => a + bill.remaining, 0), 0);
+  return { current, old, total: current + old };
+}
+// one-time: build parent cards from what children already have (parent name + phone); same phone = same family
+let parentsAutoRunning = false;
+async function autoCreateParents() {
+  if (parentsAutoRunning || serverVersion < 4 || data.parents.length) return;
+  try { if (localStorage.getItem('gimili_parents_auto_v1')) return; } catch (_) {}
+  const candidates = data.children.filter(child => !childParentIds(child).length && (phoneKey(child.phone).length >= 7 || String(child.parent || '').trim()));
+  if (!candidates.length) return;
+  parentsAutoRunning = true;
+  try {
+    const groups = new Map();
+    candidates.forEach(child => { const key = phoneKey(child.phone).length >= 7 ? `p:${phoneKey(child.phone)}` : `n:${child.id}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(child); });
+    for (const kids of groups.values()) {
+      const named = kids.find(child => String(child.parent || '').trim());
+      const name = named ? String(named.parent).trim() : `${kids.map(child => child.name).filter(Boolean).join(', ')} — მშობელი`;
+      const phone2 = kids.map(child => child.phone2).find(value => value && phoneKey(value) !== phoneKey(kids[0].phone)) || '';
+      const parent = await dataAdapter.create('parents', { name, phone: kids[0].phone || '', phone2, comment: 'ავტომატურად შექმნილია ბავშვის ბარათიდან' });
+      for (const child of kids) await dataAdapter.update('children', child.id, { parentIds: [...new Set([...childParentIds(child), parent.id])] });
+    }
+    try { localStorage.setItem('gimili_parents_auto_v1', '1'); } catch (_) {}
+    if (current === 'parents') go('parents');
+    toast(`მშობლების ბარათები შეიქმნა: ${groups.size}`);
+  } finally { parentsAutoRunning = false; }
+}
+// when a child is saved with a phone, link it to the parent with that phone (or create one)
+async function ensureParentFor(child) {
+  if (!child || childParentIds(child).length || phoneKey(child.phone).length < 7) return;
+  let parent = data.parents.find(item => phoneKey(item.phone) === phoneKey(child.phone) || phoneKey(item.phone2) === phoneKey(child.phone));
+  if (!parent) parent = await dataAdapter.create('parents', { name: String(child.parent || '').trim() || `${child.name} — მშობელი`, phone: child.phone, phone2: child.phone2 || '', comment: '' });
+  await dataAdapter.update('children', child.id, { parentIds: [parent.id] });
+}
+const telLink = phone => phone ? `<a class="tel" href="tel:${esc(String(phone).replace(/[^+\d]/g, ''))}">${esc(phone)}</a>` : '';
+function parentsView() {
+  const rows = [...data.parents].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ka'));
+  const totalDebt = rows.reduce((sum, parent) => sum + familyDebt(parent.id).total, 0);
+  return `${head('მშობლები', `${rows.length} ოჯახი`, '<button class="btn icon-btn" onclick="parentForm()" aria-label="მშობლის დამატება">＋</button>')}<div class="metrics payment-metrics"><div class="metric" style="--accent:var(--pink)"><span class="label">ოჯახების ვალი</span><strong>${money(totalDebt)}</strong><span class="delta">მიმდინარე თვე + ძველი ვალები</span></div><div class="metric" style="--accent:var(--blue)"><span class="label">ბავშვები მშობლის გარეშე</span><strong>${activePeople('children').filter(child => !childParents(child).length).length}</strong></div></div><input class="search" placeholder="სახელი ან ტელეფონი" aria-label="მშობლების ძებნა" oninput="filterRows(this.value)">${rows.length ? `<div class="list cards-grid" id="rows">${rows.map(parent => { const kids = parentChildren(parent.id), debt = familyDebt(parent.id); return `<article class="card parent-card" data-search="${esc([parent.name, parent.phone, parent.phone2, ...kids.map(k => k.name)].join(' '))}"><div class="teacher-top"><div class="pic" style="--accent:var(--blue)">${esc((parent.name || '?').slice(0, 1))}</div><div><h2>${esc(parent.name || 'სახელი არ არის')}</h2><p class="meta">${telLink(parent.phone) || 'ტელეფონი არ არის'}${parent.phone2 ? ` · ${telLink(parent.phone2)}` : ''}</p></div><button class="btn small secondary" onclick="parentForm('${esc(parent.id)}')">შეცვლა</button></div><div class="activity-members"><b>ბავშვები:</b>${kids.length ? kids.map(k => `<button onclick="showChild('${esc(k.id)}')">${esc(k.name)}${isActiveRecord(k, 'children') ? '' : ' · არააქტიური'}</button>`).join('') : '<span class="meta">ბავშვი არ არის მიბმული</span>'}</div><div class="family-debt ${debt.total > 0 ? 'due' : 'ok'}"><span>${debt.total > 0 ? `ოჯახის ვალი${debt.old ? ` (ძველი: ${money(debt.old)})` : ''}` : 'ვალი არ არის'}</span><strong>${money(debt.total)}</strong></div>${parent.comment ? `<p class="meta">${esc(parent.comment)}</p>` : ''}</article>`; }).join('')}</div>` : empty('მშობლები ჯერ არ არის', button('მშობლის დამატება', 'parentForm()'))}`;
+}
+function parentForm(id, presetChildId = '') {
+  const old = id ? get('parents', id) : null;
+  openForm(old ? 'მშობლის ბარათი' : 'ახალი მშობელი', [
+    {name:'name',label:'სახელი და გვარი',required:true},{name:'phone',label:'ტელეფონი',type:'tel'},{name:'phone2',label:'დამატებითი ტელეფონი',type:'tel'},
+    {name:'childIds',label:'ბავშვები',type:'multi',options:data.children.map(child => [child.id, `${child.name}${isActiveRecord(child,'children') ? '' : ' · არააქტიური'}`])},
+    {name:'comment',label:'კომენტარი',type:'textarea'},
+  ], async values => {
+    const chosen = new Set(values.childIds || []); delete values.childIds;
+    const saved = old ? await dataAdapter.update('parents', id, values) : await dataAdapter.create('parents', values);
+    for (const child of data.children) {
+      const ids = new Set(childParentIds(child)), has = ids.has(saved.id), want = chosen.has(child.id);
+      if (has === want) continue;
+      want ? ids.add(saved.id) : ids.delete(saved.id);
+      await dataAdapter.update('children', child.id, { parentIds: [...ids] });
+    }
+    go(current === 'childProfile' ? 'childProfile' : 'parents'); toast('მშობლის ბარათი შენახულია');
+  }, old ? { ...old, childIds: parentChildren(old.id).map(child => child.id) } : { childIds: presetChildId ? [presetChildId] : [] });
+  if (old) $('modalForm').querySelector('.form-actions')?.insertAdjacentHTML('afterbegin', `<button class="btn danger" type="button" onclick="deleteParent('${esc(old.id)}')">წაშლა</button>`);
+}
+async function deleteParent(id) {
+  const parent = get('parents', id); if (!parent) return;
+  if (!confirm(`წავშალოთ „${parent.name || ''}“? ბავშვების ბარათები დარჩება.`)) return;
+  for (const child of parentChildren(id)) await dataAdapter.update('children', child.id, { parentIds: childParentIds(child).filter(item => item !== id) });
+  await dataAdapter.remove('parents', id); closeModal(); go('parents'); toast('წაიშალა');
+}
+function linkParentForm(childId) {
+  const child = get('children', childId); if (!child) return;
+  openForm(`${child.name} · მშობლები`, [{name:'parentIds',label:'აირჩიეთ მშობლები',type:'multi',options:data.parents.map(parent => [parent.id, `${parent.name}${parent.phone ? ` · ${parent.phone}` : ''}`])}], async values => {
+    await dataAdapter.update('children', childId, { parentIds: values.parentIds || [] }); go('childProfile'); toast('შენახულია');
+  }, { parentIds: childParentIds(child) });
+  $('modalForm').querySelector('.form-actions')?.insertAdjacentHTML('afterbegin', `<button class="btn secondary" type="button" onclick="closeModal();setTimeout(()=>parentForm(null,'${esc(childId)}'),90)">＋ ახალი მშობელი</button>`);
+}
+function parentsBlock(child) {
+  const parents = childParents(child);
+  return `<section class="section card"><div class="section-title"><h2>მშობლები</h2><button class="btn small secondary" onclick="linkParentForm('${esc(child.id)}')">${parents.length ? 'შეცვლა' : '＋ მიბმა'}</button></div>${parents.length ? `<div class="list single">${parents.map(parent => { const siblings = parentChildren(parent.id).filter(k => k.id !== child.id); const debt = familyDebt(parent.id); return `<article class="row"><div class="pic" style="--accent:var(--blue)">${esc((parent.name || '?').slice(0, 1))}</div><div class="row-body"><div class="row-title">${esc(parent.name)}</div><div class="meta">${telLink(parent.phone) || 'ტელეფონი არ არის'}${parent.phone2 ? ` · ${telLink(parent.phone2)}` : ''}${siblings.length ? `<br>და/ძმა: ${siblings.map(k => `<button class="link-btn" onclick="showChild('${esc(k.id)}')">${esc(k.name)}</button>`).join(', ')}` : ''}${debt.total > 0 && siblings.length ? `<br>ოჯახის ვალი: <b class="danger-text">${money(debt.total)}</b>` : ''}</div></div><button class="btn small secondary" onclick="parentForm('${esc(parent.id)}')">ბარათი</button></article>`; }).join('')}</div>` : `<p class="meta">${child.parent || child.phone ? `ძველი ჩანაწერი: ${esc(child.parent || '')} ${esc(child.phone || '')}` : 'მშობელი არ არის მიბმული'}</p>`}</section>`;
+}
 function contacts() {
   const allRows = [...data.children], rows = filteredByParticipantStatus('children',allRows).sort((a, b) => Number(!!a.phone || !!a.phone2) - Number(!!b.phone || !!b.phone2));
   const missing = rows.filter(c => !c.phone && !c.phone2).length;
@@ -1246,6 +1330,7 @@ const views = {
   schedule: calendar,
   attendance: attendanceView,
   months: monthsView,
+  parents: parentsView,
 };
 
 const baseReports = views.reports;
@@ -1270,7 +1355,7 @@ views.reports = () => {
 
 const NAV_GROUPS = [
   ['', [['dashboard','⌂','მთავარი'],['schedule','▦','კალენდარი']]],
-  ['ბავშვები', [['children','☺','ბავშვები'],['attendance','✓','დასწრება'],['contacts','☎','კონტაქტები'],['leads','✉','განაცხადები']]],
+  ['ბავშვები', [['children','☺','ბავშვები'],['parents','♡','მშობლები'],['attendance','✓','დასწრება'],['contacts','☎','კონტაქტები'],['leads','✉','განაცხადები']]],
   ['ცენტრი', [['clubs','✦','წრეები'],['staff','♙','თანამშრომლები']]],
   ['ფინანსები', [['payments','₾','გადახდები'],['expenses','−','ხარჯები'],['accounting','◫','ბუღალტერია'],['months','🔒','თვის დახურვა'],['reports','▤','სტატისტიკა']]],
   ['სხვა', [['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']]],
@@ -1392,6 +1477,7 @@ function childForm(id) {
     values.activityStart = withStart(old, values.activityIds.filter(circleId => !toList(old?.activityIds).includes(circleId)));
     const saved = old ? await dataAdapter.update('children', id, values) : await dataAdapter.create('children', values);
     currentChildId = saved.id;
+    try { await ensureParentFor(get('children', saved.id)); } catch (_) {}
     const needsSetup=toList(saved.activityIds).map(circleId=>get('clubs',circleId)).find(circle=>(isCraftCircle(circle)&&!participantType(saved,circle))||(isFlexibleCircle(circle)&&!childBillingMode(saved,circle)));
     if (needsSetup) setTimeout(()=>editCircleBilling(saved.id,needsSetup.id),120); else go('childProfile');
     toast('ბავშვის ბარათი შენახულია');
@@ -1410,7 +1496,7 @@ function phoneForm(id) {
   const old = get('children', id);
   if (!old) return;
   openForm(`Контакт · ${old.name}`, [{name:'parent',label:'Родитель / контактное лицо'},{name:'phone',label:'Основной телефон',type:'tel'},{name:'phone2',label:'Дополнительный телефон',type:'tel'}], async values => {
-    await dataAdapter.update('children', id, values); go('contacts'); toast('Контакт сохранён');
+    await dataAdapter.update('children', id, values); try { await ensureParentFor(get('children', id)); } catch (_) {} go('contacts'); toast('Контакт сохранён');
   }, old);
 }
 function paymentForm(initialChildId = '', paymentId = '') {
