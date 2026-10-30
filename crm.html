@@ -113,6 +113,8 @@
       .family-debt{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:12px;font-weight:800}.family-debt.due{background:#fff3ef;color:#a3341f}.family-debt.ok{background:#e9f8ef;color:#176a39}
     a.tel{color:var(--blue);font-weight:700;text-decoration:none}.parent-card .teacher-top{align-items:center}
       .choice-list{display:grid;gap:8px}.choice-option{display:flex!important;align-items:center;gap:12px;margin:0!important;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:17px;cursor:pointer}.choice-option input{width:22px!important;height:22px!important;min-height:0!important;margin:0;flex:none}.choice-option:has(input:checked){border-color:var(--blue);background:#eaf3ff;color:var(--blue)}
+      .event-people{display:grid;gap:6px;margin-top:10px}.event-person{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:#fff}.event-person>span{margin-left:auto;font-size:13px;font-weight:800}.event-person.due>span{color:#c62828}.event-person.paid>span{color:var(--green)}
+      .section-tabs{flex-wrap:wrap;overflow:visible}
   </style>
 </head>
 <body>
@@ -134,5 +136,5 @@
   <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="requestCloseModal()" aria-label="დახურვა">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261031-modal" defer></script>
+<script src="./crm.js?v=20261031-events" defer></script>
 </body></html>
