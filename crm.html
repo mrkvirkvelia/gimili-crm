@@ -109,6 +109,7 @@
     .visit-day.sched{background:#fff7e0;border-color:#f3d48a}.visit-day.on{background:var(--green);border-color:var(--green);color:#fff}.visit-day.is-today{outline:2px solid var(--blue);outline-offset:1px}.visit-day:disabled{opacity:.35}
     .visit-total{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;border-radius:14px;background:#eaf8ef;font-weight:800}.visit-total strong{font-size:20px}.visit-total small{color:var(--muted);font-weight:600}
       .subject-list{grid-template-columns:minmax(0,1fr)}.subject-line{min-width:0}.subject-line-bottom{flex-wrap:wrap;justify-content:flex-start;gap:8px}.subject-line-bottom .btn:last-child{margin-left:auto}
+      button.bill-day{border:0;font:inherit;cursor:pointer;position:relative}button.bill-day i{position:absolute;top:2px;right:5px;font-style:normal;font-size:12px}.billing-month{flex-wrap:wrap}
   </style>
 </head>
 <body>
@@ -130,5 +131,5 @@
   <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="closeModal()">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261030-visits" defer></script>
+<script src="./crm.js?v=20261030-dropin" defer></script>
 </body></html>
