@@ -1432,6 +1432,7 @@ function syncCircleRow(row) {
   }
 }
 function openForm(title, fields, submit, initial = {}) {
+  modalDirty = false;
   $("modalTitle").textContent = translateText(title);
   const form = $("modalForm");
   form.innerHTML = fields.map(field => {
@@ -1472,7 +1473,16 @@ function openForm(title, fields, submit, initial = {}) {
   };
   $("modal").classList.remove('hidden');
 }
-function closeModal() { $("modal").classList.add('hidden'); }
+// The card closes only with its own buttons (× / Cancel / Save) — never by tapping the dimmed background,
+// so selecting text or a stray tap can't close it. × asks first if something was changed.
+let modalDirty = false;
+function closeModal() { modalDirty = false; $("modal").classList.add('hidden'); }
+function requestCloseModal() {
+  if (modalDirty && !confirm('ცვლილებები არ არის შენახული. დავხუროთ შენახვის გარეშე?')) return;
+  closeModal();
+}
+document.addEventListener('input', event => { if (event.target.closest?.('#modalForm')) modalDirty = true; });
+document.addEventListener('change', event => { if (event.target.closest?.('#modalForm')) modalDirty = true; });
 async function logoutCRM() {
   try { await api('/api/logout', {method:'POST', body:'{}'}); }
   finally { localStorage.removeItem(CACHE_KEY); localStorage.removeItem('gimili_crm_session'); localStorage.removeItem('gimili_crm_user'); location.replace('./login.html'); }

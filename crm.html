@@ -131,8 +131,8 @@
     </nav>
   </div>
   <aside id="drawer" class="drawer hidden" onclick="if(event.target===this)toggleDrawer(false)"><div class="drawer-panel"><div class="drawer-head"><div><b style="font-size:20px">ყველა განყოფილება</b><div class="meta">ღიმილი CRM</div></div><button class="close" onclick="toggleDrawer(false)">×</button></div><div id="drawerGrid" class="drawer-grid"></div></div></aside>
-  <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="closeModal()">×</button></div><form id="modalForm" class="form"></form></div></div>
+  <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="requestCloseModal()" aria-label="დახურვა">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261030-exp" defer></script>
+<script src="./crm.js?v=20261031-modal" defer></script>
 </body></html>
