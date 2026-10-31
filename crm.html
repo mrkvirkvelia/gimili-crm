@@ -117,6 +117,41 @@
       .choice-list{display:grid;gap:8px}.choice-option{display:flex!important;align-items:center;gap:12px;margin:0!important;padding:14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-weight:800;font-size:17px;cursor:pointer}.choice-option input{width:22px!important;height:22px!important;min-height:0!important;margin:0;flex:none}.choice-option:has(input:checked){border-color:var(--blue);background:#eaf3ff;color:var(--blue)}
       .event-people{display:grid;gap:6px;margin-top:10px}.event-person{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:#fff}.event-person>span{margin-left:auto;font-size:13px;font-weight:800}.event-person.due>span{color:#c62828}.event-person.paid>span{color:var(--green)}
       .section-tabs{flex-wrap:wrap;overflow:visible}
+
+    /* ── no sideways movement anywhere ── */
+    html,body{max-width:100%;overflow-x:hidden}@supports(overflow:clip){html,body{overflow-x:clip}}
+    #view{min-width:0;max-width:100%}#view>*{max-width:100%}
+    .page-head{flex-wrap:wrap;row-gap:10px}.page-head>div:first-child{min-width:0;flex:1 1 200px}.page-head h1{overflow-wrap:anywhere}
+    .head-action{flex-wrap:wrap;justify-content:flex-end}
+    @media(max-width:759px){.head-action{width:100%;justify-content:stretch}.head-action .btn{flex:1 1 0;min-width:0}}
+    .periods{flex-wrap:wrap;overflow:visible;padding-bottom:4px}
+    .week-strip{overscroll-behavior-x:contain}
+    .card,.metric,.section{min-width:0}.teacher-top{min-width:0}.teacher-top>div{min-width:0}.teacher-top h2,.teacher-top .meta{overflow-wrap:anywhere}
+    .profile-details{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-details>div{min-width:0;overflow-wrap:anywhere}
+    .metric strong{overflow-wrap:anywhere}
+    .sec-table{table-layout:fixed}.sec-table th,.sec-table td{white-space:normal;overflow-wrap:anywhere}
+    .sec-table th:first-child{width:34%}
+    @media(max-width:520px){.sec-table th,.sec-table td{padding:8px 4px;font-size:13px}.sec-table thead th{font-size:11px}}
+    /* ── monthly accounting ── */
+    .acc-month{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;margin-bottom:12px}
+    .acc-month>div{text-align:center;min-width:0}.acc-month b{display:block;font-size:19px}.acc-month small{color:var(--muted);font-weight:700}
+    .acc-month button{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#f4f9fd;color:var(--navy);font-size:26px;font-weight:900;flex:none}.acc-month button:disabled{opacity:.3}
+    .acc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.acc-kpis .metric strong{font-size:24px}.acc-kpis .delta{display:block;margin-top:4px}
+    .delta.up{color:#16884a}.delta.down{color:#c62828}.delta.muted{color:var(--muted)}.delta i{font-style:normal;color:var(--muted);font-weight:600}
+    .mchart{display:flex;align-items:stretch;gap:4px;height:230px;padding-top:6px}
+    .mcol{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;border-radius:12px;padding:4px 1px;font:inherit;color:inherit}
+    .mcol.on{background:#eaf3fd;box-shadow:inset 0 0 0 2px #b9d6f6}
+    .mbars{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px}
+    .mbars i{display:block;width:min(42%,22px);border-radius:6px 6px 2px 2px;min-height:2px}.mbars .inc,.mlegend .inc{background:var(--green)}.mbars .exp,.mlegend .exp{background:var(--pink)}
+    .mprofit{font-size:10px;font-weight:900;color:#16884a;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:clip}.mprofit.neg{color:#c62828}
+    .mlabel{font-size:11px;font-weight:800;color:var(--muted)}
+    .mlegend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;font-weight:700;color:var(--muted)}.mlegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+    .hbars{display:grid;gap:12px}.hbar-top{display:flex;justify-content:space-between;gap:10px;font-weight:700}.hbar-top span{min-width:0;overflow-wrap:anywhere}.hbar-top b{white-space:nowrap}
+    .hbar-track{height:10px;border-radius:6px;background:#eef3f7;overflow:hidden;margin-top:5px}.hbar-track i{display:block;height:100%;border-radius:6px}.hbar small{color:var(--muted);font-weight:700}
+    .month-table tbody tr:not(.total){cursor:pointer}.month-table tr.on th,.month-table tr.on td{background:#eaf3fd}.ok-text{color:#16884a}
+    .acc-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0 18px}
+    @media(min-width:760px){.acc-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.acc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mchart{height:280px;gap:10px}.mprofit{font-size:12px}.mlabel{font-size:13px}}
+    @media(min-width:1680px){.acc-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}.acc-kpis .metric strong{font-size:22px}}
   </style>
 </head>
 <body>
@@ -138,5 +173,5 @@
   <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="requestCloseModal()" aria-label="დახურვა">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261031-counters" defer></script>
+<script src="./crm.js?v=20261101-accounting" defer></script>
 </body></html>
