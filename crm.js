@@ -459,6 +459,7 @@ const button = (label, call) => `<button class="btn small" onclick="${call}">${e
 function periodStart() {
   const now = new Date();
   if (period === "custom" && customPeriod) return new Date(`${customPeriod.from}T00:00:00`);
+  if (period === "prev") return new Date(now.getFullYear(), now.getMonth() - 1, 1);
   if (period === "year") return new Date(now.getFullYear(), 0, 1);
   if (period === "quarter") return new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
   if (period === "six") return new Date(now.getFullYear(), now.getMonth() - 5, 1);
@@ -469,11 +470,17 @@ function inPeriod(value) {
   // compare calendar days, not clock time: anything dated today counts in full
   const key=dateKey(value);
   if (!key) return false;
-  const end = period === "custom" && customPeriod ? customPeriod.to : today();
+  const end = periodEnd();
   return key >= localDateOf(periodStart()) && key <= end;
 }
+// Last day of the selected period: custom end, end of previous month, or today.
+function periodEnd() {
+  if (period === 'custom' && customPeriod) return customPeriod.to;
+  if (period === 'prev') return monthRange(shiftMonth(todayMonth(), -1)).to;
+  return today();
+}
 function periodChips() {
-  return `<div class="periods">${[['month','თვე'],['three','3 თვე'],['quarter','კვარტალი'],['six','6 თვე'],['year','წელი'],['custom','საკუთარი პერიოდი']].map(([id,label])=>`<button class="chip ${period===id?'active':''}" onclick="setPeriod('${id}')">${label}</button>`).join('')}</div>`;
+  return `<div class="periods">${[['month','თვე'],['prev','წინა თვე'],['three','3 თვე'],['quarter','კვარტალი'],['six','6 თვე'],['year','წელი'],['custom','საკუთარი პერიოდი']].map(([id,label])=>`<button class="chip ${period===id?'active':''}" onclick="setPeriod('${id}')">${label}</button>`).join('')}</div>`;
 }
 function setPeriod(value) {
   if (value === "custom") {
@@ -490,7 +497,7 @@ const sums = () => ({
 
 function periodMonthCount() {
   const start = periodStart();
-  const end = period === 'custom' && customPeriod ? new Date(`${customPeriod.to}T12:00:00`) : new Date();
+  const end = new Date(`${periodEnd()}T12:00:00`);
   return Math.max(1, (end.getFullYear()-start.getFullYear())*12 + end.getMonth()-start.getMonth()+1);
 }
 // ---------- Teacher assignments & pay rules ----------
@@ -550,7 +557,7 @@ const addDays = (key, n) => { const d = new Date(`${key}T12:00:00`); d.setDate(d
 function localDateOf(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 const mondayOf = key => { const d = new Date(`${key}T12:00:00`); return addDays(key, -((d.getDay() + 6) % 7)); };
 function monthRange(month) { const [y, m] = month.split('-').map(Number); return { from: `${month}-01`, to: `${month}-${String(new Date(y, m, 0).getDate()).padStart(2,'0')}` }; }
-function periodRange() { return { from: localDateOf(periodStart()), to: period === 'custom' && customPeriod ? customPeriod.to : today() }; }
+function periodRange() { return { from: localDateOf(periodStart()), to: periodEnd() }; }
 function weekRange(key = today()) { const from = mondayOf(key); return { from, to: addDays(from, 6) }; }
 const inRange = (value, range) => { const key = dateKey(value); return Boolean(key) && key >= range.from && key <= range.to; };
 const rangeMatch = range => item => inRange(item.date, range);
@@ -637,7 +644,9 @@ const settlementsForMonth = month => (data.settlements || []).filter(item => mon
 function weekOf(date) { const d = new Date(`${date}T12:00:00`), mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const sun = new Date(mon); sun.setDate(mon.getDate() + 6); return { from: localDateOf(mon), to: localDateOf(sun) }; }
 function settlementForm(staffId, id = null) {
   const person = get('staff', staffId), old = id ? (data.settlements || []).find(item => item.id === id) : null; if (!person) return;
+  const services = teacherCircles(person.id).filter(circle => !isEvent(circle)).sort(byName);
   openForm(`${person.name} · კვირის დახურვა`, [
+    ...(services.length ? [{ name:'subjectId', label:'რა მომსახურება', type:'choice', required:true, options: services.map(circle => [circle.id, circle.name]) }] : []),
     { name:'date', label:'თარიღი (კვირის ან პერიოდის ბოლო დღე)', type:'date', required:true },
     { name:'total', label:'სულ აიღო მშობლებისგან, ₾', type:'number', required:true },
     { name:'centerAmount', label:'ცენტრს უნდა მისცეს, ₾', type:'number', required:true },
@@ -646,10 +655,10 @@ function settlementForm(staffId, id = null) {
     const total = number(values.total), center = number(values.centerAmount);
     if (center > total) throw new Error('ცენტრის წილი ვერ იქნება მთლიან თანხაზე მეტი');
     if (old) assertOpen(old.date); assertOpen(values.date);
-    const record = { staffId, date: values.date, total, centerAmount: center, comment: values.comment || '' };
+    const record = { staffId, subjectId: values.subjectId || '', date: values.date, total, centerAmount: center, comment: values.comment || '' };
     if (old) await dataAdapter.update('settlements', old.id, record); else await dataAdapter.create('settlements', record);
     closeModal(); go(current); toast(`შენახულია · ${person.name}: ${money(total - center)} · ცენტრს: ${money(center)}`);
-  }, old ? { ...old, date: dateKey(old.date) } : { date: settlementDefaultDate() });
+  }, old ? { ...old, date: dateKey(old.date) } : { date: settlementDefaultDate(), subjectId: services.length === 1 ? services[0].id : '' });
   const form = $('modalForm');
   form.querySelector('.form-actions')?.insertAdjacentHTML('beforebegin', '<div class="settle-preview" id="settlePreview"></div>');
   const sync = () => { const t = number($('field-total')?.value), c = number($('field-centerAmount')?.value); $('settlePreview').innerHTML = `<div><small>${esc(person.name)}ს რჩება</small><b>${money(Math.max(0, t - c))}</b></div><div class="center"><small>ცენტრს</small><b>${money(c)}</b></div>`; };
@@ -664,6 +673,12 @@ async function deleteSettlement(id) {
 }
 // On Fri/Sat/Sun the week is dated by its Friday, so a week closed on Sunday 1st still belongs to the previous month.
 function settlementDefaultDate() { const d = new Date(`${weekOf(today()).from}T12:00:00`); d.setDate(d.getDate() + 4); const fri = localDateOf(d); return fri <= today() ? fri : today(); }
+// In the first 10 days of a month, the previous month is still being finished; returns it if not closed yet.
+function openPreviousMonth() { const prev = shiftMonth(todayMonth(), -1); return Number(today().slice(8)) <= 10 && !isClosedMonth(prev) ? prev : null; }
+function closeMonthReminder() {
+  const prev = openPreviousMonth(); if (!prev) return '';
+  return `<section class="section settle-remind"><div><b>${esc(prettyMonth(prev))} ჯერ არ არის დახურული</b><small>შეამოწმეთ შემოსავალი, ხარჯები და ხელფასები და დახურეთ თვე</small></div><button class="btn small" onclick="period='prev';go('months')">დახურვა</button></section>`;
+}
 function settleReminder() {
   const wd = new Date(`${today()}T12:00:00`).getDay(); if (![5, 6, 0].includes(wd)) return '';
   const week = weekOf(today());
@@ -674,8 +689,8 @@ function settlementCard(person) {
   const inMonth = rows.filter(item => monthKey(item.date) === month), sum = list => list.reduce((acc, item) => ({ total: acc.total + number(item.total), center: acc.center + number(item.centerAmount) }), { total: 0, center: 0 });
   const prevMonth = shiftMonth(month, -1), p = sum(rows.filter(item => monthKey(item.date) === prevMonth)), m = sum(inMonth);
   return `<article class="teacher-card card settle-card ${isActiveRecord(person,'staff')?'':'record-inactive'}"><div class="teacher-top"><div class="pic" style="--accent:var(--pink)">${esc((person.name||'?').slice(0,1))}</div><div><h2>${esc(person.name)}</h2><p class="meta">${esc(person.role||'სპეციალისტი')} · კვირის დახურვა — თანხას თავად იღებს</p></div><button class="btn small" onclick="settlementForm('${esc(person.id)}')">＋ კვირის დახურვა</button></div>
-  <div class="settle-sums">${[[prevMonth, p], [month, m]].map(([key, v]) => `<div><small>${esc(prettyMonth(key))}</small><span>აიღო <b>${money(v.total)}</b></span><span>ცენტრს <b>${money(v.center)}</b></span><span>მას <b>${money(v.total - v.center)}</b></span></div>`).join('')}</div>
-  ${rows.length ? `<div class="settle-list">${rows.slice(0, 12).map(item => { const w = weekOf(dateKey(item.date)); return `<button type="button" class="settle-row" onclick="settlementForm('${esc(person.id)}','${esc(item.id)}')"><span><b>${esc(dateKey(item.date))}</b><small>${esc(item.comment || `კვირა ${weekLabel(w)}`)}</small></span><span>${money(item.total)}<small>ცენტრს ${money(item.centerAmount)}</small></span></button>`; }).join('')}</div>` : '<p class="meta" style="margin-top:10px">ჯერ არცერთი კვირა არ არის დახურული.</p>'}</article>`;
+  <div class="settle-sums">${[[prevMonth, p], [month, m]].map(([key, v]) => { const per = teacherCircles(person.id).map(circle => [circle.name, sum(rows.filter(item => monthKey(item.date) === key && item.subjectId === circle.id))]).filter(([, x]) => x.total); return `<div><small>${esc(prettyMonth(key))}</small><span>აიღო <b>${money(v.total)}</b></span><span>ცენტრს <b>${money(v.center)}</b></span><span>მას <b>${money(v.total - v.center)}</b></span>${per.map(([name, x]) => `<span class="settle-per">${esc(name)}: <b>${money(x.total)}</b> · ცენტრს ${money(x.center)}</span>`).join('')}</div>`; }).join('')}</div>
+  ${rows.length ? `<div class="settle-list">${rows.slice(0, 12).map(item => { const w = weekOf(dateKey(item.date)); return `<button type="button" class="settle-row" onclick="settlementForm('${esc(person.id)}','${esc(item.id)}')"><span><b>${esc(dateKey(item.date))}</b><small>${esc([get('clubs', item.subjectId)?.name, item.comment || `კვირა ${weekLabel(w)}`].filter(Boolean).join(' · '))}</small></span><span>${money(item.total)}<small>ცენტრს ${money(item.centerAmount)}</small></span></button>`; }).join('')}</div>` : '<p class="meta" style="margin-top:10px">ჯერ არცერთი კვირა არ არის დახურული.</p>'}</article>`;
 }
 function circleTeacherCost(subject, range, months) {
   const section = circleSection(subject);
@@ -816,7 +831,7 @@ function barList(entries, total, color) {
 }
 function accounting() {
   const months = accountingMonths();
-  if (!accountingMonth || !months.includes(accountingMonth)) accountingMonth = todayMonth();
+  if (!accountingMonth || !months.includes(accountingMonth)) accountingMonth = openPreviousMonth() && months.includes(openPreviousMonth()) ? openPreviousMonth() : todayMonth();
   const m = accountingMonth, idx = months.indexOf(m);
   const all = months.map(monthFinance), cur = all[idx], prev = idx > 0 ? all[idx - 1] : null;
   const shown = all.slice(-12), maxValue = Math.max(1, ...shown.map(item => Math.max(item.income, item.expenses)));
@@ -893,7 +908,7 @@ function dashboard() {
   const todayBlock=`<section class="section today-card"><div class="section-title"><div><h2>დღევანდელი გადახდები</h2><p class="meta">${openCount?`${openCount} გადასახდელი${overdueCount?` · <b class="danger-text">${overdueCount} ვადაგადაცილებული</b>`:''}`:'ყველაფერი გადახდილია'}</p></div><button class="btn small secondary" onclick="go('payments')">ყველა →</button></div>${(()=>{const debts=oldDebts();return debts.length?`<button class="debt-hint" onclick="paymentMonth=todayMonth();go('payments')">⚠ ძველი ვალები: ${new Set(debts.map(d=>d.childId)).size} ბავშვი · <b>${money(debts.reduce((a,d)=>a+d.remaining,0))}</b> →</button>`:''})()}${todayPayments.length?`<div class="today-list ${todayPayments.length>5&&!showAllToday?'collapsed':''}">${todayPayments.map(todayItem).join('')}</div>${todayPayments.length>5?`<button class="btn small secondary show-more" onclick="showAllToday=!showAllToday;go('dashboard')">${showAllToday?'ნაკლების ჩვენება':`ყველას ჩვენება · ${todayPayments.length}`}</button>`:''}`:`<div class="today-empty"><span>✓</span><div><b>დღეს გადასახდელი არავინაა</b><small>მომდევნო გადახდები ქვემოთ, დღეების ზოლზე ჩანს.</small></div></div>`}</section>`;
   const days=Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;const month=key.slice(0,7);const dueKids=currentChildren.filter(c=>paymentDayFor(c,month)&&billingDate(c,month)===key&&billingRows(month).some(row=>row.child.id===c.id&&!paidStatus(row.status)));return {key,d,dues:dueKids.length,lessons:calendarEventsForDate(key).length}});
   const weekStrip=`<section class="section card week-card"><div class="section-title"><div><h2>უახლოესი დღეები</h2><p class="meta">₾ — გადახდის დღე · ● — გაკვეთილები</p></div><button class="btn small secondary" onclick="go('schedule')">კალენდარი →</button></div><div class="week-strip">${days.map((x,i)=>`<button class="week-day ${i===0?'today':''} ${x.dues?'has-due':''}" onclick="calendarMonth='${x.key.slice(0,7)}';calendarSelected='${x.key}';go('schedule')"><small>${x.d.toLocaleDateString('ka-GE',{weekday:'short'})}</small><b>${x.d.getDate()}</b>${x.dues?`<span class="due-count">₾ ${x.dues}</span>`:'<span class="due-count empty">·</span>'}${x.lessons?`<i>● ${x.lessons}</i>`:'<i>&nbsp;</i>'}</button>`).join('')}</div></section>`;
-  return `${head('მთავარი', `${new Date().toLocaleDateString('ka-GE',{weekday:'long',day:'numeric',month:'long'})}`)}<div class="dash-top"><div class="dash-week">${weekStrip}</div><div class="dash-today">${todayBlock}</div></div>${settleReminder()}${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--blue)"><span class="label">აქტიური ბავშვები</span><strong>${active}</strong><span class="delta">ახალი ამ პერიოდში: ${newChildren}</span></div><div class="metric" style="--accent:var(--green)"><span class="label">მასწავლებლები</span><strong>${activePeople('staff',teacherStaff()).length}</strong><span class="delta">პერსონალი: ${activePeople('staff',personnelStaff()).length}</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">თვიური ტარიფები</span><strong>${money(due)}</strong><span class="delta">გადასახდელი თანხა</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">მიღებული თანხა</span><strong>${money(income)}</strong><span class="delta">ფაქტობრივი გადახდები</span></div></section><div class="dashboard-grid"><section class="section card"><div class="section-title"><h2>ფინანსები</h2><button class="btn small secondary" onclick="go('accounting')">ბუღალტერია →</button></div><div class="finance"><div><small>შემოსავალი</small><strong>${money(income)}</strong></div><div><small>ხარჯები</small><strong>${money(expenses)}</strong></div><div class="profit"><small>წმინდა მოგება</small><strong>${money(profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ხელფასები: <b>${money(salaries)}</b> (მასწავლებლები და პერსონალი).</p></section><section class="section card"><div class="section-title"><div><h2>სისტემის კონტროლი</h2><p class="meta">რა არის შესავსები ან გასაწმენდი</p></div></div><div class="quality-list"><button onclick="go('contacts')"><span>☎</span><b>ტელეფონის გარეშე</b><strong>${currentChildren.filter(c => !c.phone && !c.phone2).length}</strong></button><button onclick="noPayDayList()"><span>◷</span><b>გადახდის დღის გარეშე</b><strong>${unknownDays}</strong></button><button onclick="go('clubs')"><span>♙</span><b>მასწავლებლის გარეშე</b><strong>${circlesWithoutTeacher}</strong></button><button onclick="emptyCirclesList()"><span>⌁</span><b>წრეები ბავშვების გარეშე</b><strong>${unusedLegacyCircles}</strong></button>${invalidTransactionDates?`<button onclick="go('accounting')"><span>!</span><b>არასწორი თარიღი</b><strong>${invalidTransactionDates}</strong></button>`:''}</div></section></div>`;
+  return `${head('მთავარი', `${new Date().toLocaleDateString('ka-GE',{weekday:'long',day:'numeric',month:'long'})}`)}<div class="dash-top"><div class="dash-week">${weekStrip}</div><div class="dash-today">${todayBlock}</div></div>${closeMonthReminder()}${settleReminder()}${periodChips()}<section class="metrics"><div class="metric" style="--accent:var(--blue)"><span class="label">აქტიური ბავშვები</span><strong>${active}</strong><span class="delta">ახალი ამ პერიოდში: ${newChildren}</span></div><div class="metric" style="--accent:var(--green)"><span class="label">მასწავლებლები</span><strong>${activePeople('staff',teacherStaff()).length}</strong><span class="delta">პერსონალი: ${activePeople('staff',personnelStaff()).length}</span></div><div class="metric" style="--accent:var(--yellow)"><span class="label">თვიური ტარიფები</span><strong>${money(due)}</strong><span class="delta">გადასახდელი თანხა</span></div><div class="metric" style="--accent:var(--pink)"><span class="label">მიღებული თანხა</span><strong>${money(income)}</strong><span class="delta">ფაქტობრივი გადახდები</span></div></section><div class="dashboard-grid"><section class="section card"><div class="section-title"><h2>ფინანსები</h2><button class="btn small secondary" onclick="go('accounting')">ბუღალტერია →</button></div><div class="finance"><div><small>შემოსავალი</small><strong>${money(income)}</strong></div><div><small>ხარჯები</small><strong>${money(expenses)}</strong></div><div class="profit"><small>წმინდა მოგება</small><strong>${money(profit)}</strong></div></div><p class="section-note" style="margin-top:14px">ხელფასები: <b>${money(salaries)}</b> (მასწავლებლები და პერსონალი).</p></section><section class="section card"><div class="section-title"><div><h2>სისტემის კონტროლი</h2><p class="meta">რა არის შესავსები ან გასაწმენდი</p></div></div><div class="quality-list"><button onclick="go('contacts')"><span>☎</span><b>ტელეფონის გარეშე</b><strong>${currentChildren.filter(c => !c.phone && !c.phone2).length}</strong></button><button onclick="noPayDayList()"><span>◷</span><b>გადახდის დღის გარეშე</b><strong>${unknownDays}</strong></button><button onclick="go('clubs')"><span>♙</span><b>მასწავლებლის გარეშე</b><strong>${circlesWithoutTeacher}</strong></button><button onclick="emptyCirclesList()"><span>⌁</span><b>წრეები ბავშვების გარეშე</b><strong>${unusedLegacyCircles}</strong></button>${invalidTransactionDates?`<button onclick="go('accounting')"><span>!</span><b>არასწორი თარიღი</b><strong>${invalidTransactionDates}</strong></button>`:''}</div></section></div>`;
 }
 
 function children() {
