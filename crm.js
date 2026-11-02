@@ -782,7 +782,13 @@ function nonSalaryExpensesForMonth(key) {
 // ── Accounting by month ─────────────────────────────────────────────
 // Income = payments for that billing month; salaries = accrued for that month.
 let accountingMonth = null;
-const paymentMonthOf = item => (/^\d{4}-\d{2}$/.test(String(item.billingMonth || '')) ? item.billingMonth : monthKey(item.date));
+// Income month = the month it was paid for. Exception: money paid later for a month that is already closed
+// (an old debt) is income of the month it actually arrived — the closed month's figures stay as they were.
+const paymentMonthOf = item => {
+  const billed = /^\d{4}-\d{2}$/.test(String(item.billingMonth || '')) ? item.billingMonth : '', paidIn = monthKey(item.date);
+  if (!billed) return paidIn;
+  return paidIn && paidIn > billed && isClosedMonth(billed) ? paidIn : billed;
+};
 function accountingMonths() {
   const now = todayMonth(), keys = new Set([now]);
   data.payments.forEach(item => { const k = paymentMonthOf(item); if (k) keys.add(k); });
