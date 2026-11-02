@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#8ec8ef">
+<link rel="icon" href="./assets/icon.png">
+<meta property="og:title" content="ღიმილი · ბავშვის განვითარების ცენტრი">
+<meta property="og:image" content="./assets/logo.webp">
+<title>ღიმილი · Gimili</title>
+<meta name="author" content="Irakli Kvirkvelia · Homes in Georgia">
+<meta name="description" content="ღიმილი — ბავშვის განვითარების ცენტრი ისანში: მინი-ბაღი, წრეები, სკოლისთვის მომზადება, ინგლისური, ლოგოპედი, ტომატისი.">
+<!-- Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&family=Noto+Sans+Georgian:wght@500;700;900&display=swap">
+<style>
+  /* Layout: sky-blue band with the logo's sun, then white "toy-box" cards in the logo's six colours; one bold colour per card. */
+  :root{
+    --sky:#8ec8ef; --sky-deep:#4aa7e6; --cloud:#ffffff; --paper:#f4faff;
+    --navy:#1b3cae; --ink:#16305a; --muted:#5a7290;
+    --sun:#ffd21f; --sun-deep:#f5b400; --pink:#e8178a; --green:#22a83a; --blue:#1a8fe0; --red:#e5261f;
+    --line:#dbe9f5;
+    --display:"Nunito","Noto Sans Georgian",system-ui,sans-serif;
+    --body:"Nunito","Noto Sans Georgian",system-ui,sans-serif;
+    --r:28px;
+    color-scheme:light;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;overflow-x:hidden}
+  @supports(overflow:clip){body{overflow-x:clip}}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--sky)}
+  a{color:inherit}
+  .wrap{width:min(100%,1120px);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+  :focus-visible{outline:3px solid var(--navy);outline-offset:3px;border-radius:10px}
+
+  /* header */
+  .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(142,200,239,.92);backdrop-filter:blur(10px)}
+  .top .wrap{display:flex;align-items:center;gap:12px;padding-block:8px}
+  .top img{height:44px;width:auto}
+  .nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+  .nav a{text-decoration:none;font-weight:800;color:var(--navy);padding:8px 12px;border-radius:999px;font-size:15px}
+  .nav a:hover{background:rgba(255,255,255,.6)}
+  .lang{display:flex;background:#fff;border-radius:999px;padding:3px;gap:2px;flex:none}
+  .lang button{border:0;background:transparent;font:800 13px var(--body);color:var(--navy);padding:6px 10px;border-radius:999px;cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--navy);color:#fff}
+  @media(max-width:820px){.nav{display:none}.lang{margin-left:auto}}
+
+  /* hero */
+  .hero{background:linear-gradient(180deg,var(--sky) 0%,#bfe2f8 70%,var(--paper) 100%);position:relative;overflow:hidden}
+  .hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:28px;align-items:center;padding-block:40px 70px}
+  .hero-logo{width:100%;max-width:520px;height:auto;filter:drop-shadow(0 18px 30px rgba(20,70,140,.18));animation:bob 5s ease-in-out infinite}
+  .eyebrow{display:inline-block;background:#fff;color:var(--pink);font-weight:900;font-size:14px;letter-spacing:.04em;padding:6px 14px;border-radius:999px}
+  .hero h1{font-size:clamp(32px,5.2vw,58px);font-weight:900;color:var(--navy);margin:16px 0 14px}
+  .hero h1 em{font-style:normal;color:var(--pink)}
+  .hero p.lead{font-size:clamp(17px,2vw,20px);color:var(--ink);max-width:34em;margin:0 0 24px}
+  .ctas{display:flex;flex-wrap:wrap;gap:12px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:0 24px;border-radius:999px;font:900 17px var(--body);text-decoration:none;cursor:pointer;border:0;transition:transform .15s ease,box-shadow .15s ease}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-sun{background:var(--sun);color:var(--navy);box-shadow:0 6px 0 var(--sun-deep)}
+  .btn-pink{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b80f6b}
+  .btn-white{background:#fff;color:var(--navy);box-shadow:0 6px 0 var(--line)}
+  .btn svg{width:22px;height:22px;flex:none}
+  .cloud{position:absolute;background:#fff;border-radius:999px;opacity:.85}
+  .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
+  .c1{width:150px;height:44px;left:-30px;bottom:38px}.c1::before{width:70px;height:70px;left:30px;top:-34px}.c1::after{width:52px;height:52px;left:84px;top:-22px}
+  .c2{width:120px;height:36px;right:6%;top:30px}.c2::before{width:56px;height:56px;left:20px;top:-28px}.c2::after{width:40px;height:40px;left:64px;top:-16px}
+  @media(max-width:820px){.hero .wrap{grid-template-columns:minmax(0,1fr);padding-block:20px 56px;text-align:center}.hero-art{order:-1}.hero-logo{max-width:340px;margin:0 auto;display:block}.ctas{justify-content:center}.hero p.lead{margin-inline:auto}}
+
+  /* quick facts */
+  .facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:-34px;position:relative;z-index:2}
+  .fact{background:#fff;border-radius:22px;padding:16px 18px;box-shadow:0 10px 24px rgba(26,80,140,.1);display:flex;gap:12px;align-items:center;min-width:0}
+  .fact i{width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;color:#fff;font-style:normal;font-weight:900;font-size:20px}
+  .fact>div{min-width:0}.fact b{display:block;font-size:16px;line-height:1.2}
+  @media(max-width:560px){.fact{flex-direction:column;align-items:flex-start;gap:8px;padding:14px}.fact b{font-size:15px}.garden-card .sunimg{width:120px;opacity:.35}}.fact small{color:var(--muted);font-weight:700;font-size:13px}
+  @media(max-width:820px){.facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  section{padding-block:56px 8px}
+  .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .sec-head h2{font-size:clamp(28px,4vw,42px);font-weight:900;color:var(--navy)}
+  .sec-head p{margin:6px 0 0;color:var(--muted);font-weight:700;max-width:38em}
+  .squiggle{display:block;width:120px;height:14px;margin-top:8px}
+
+  /* garden */
+  .garden{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px}
+  .garden-card{background:var(--sun);border-radius:var(--r);padding:28px;position:relative;overflow:hidden;color:var(--navy)}
+  .garden-card h3{font-size:30px;font-weight:900}
+  .garden-card ul{list-style:none;padding:0;margin:16px 0 22px;display:grid;gap:8px;font-weight:800}
+  .garden-card li{display:flex;gap:10px;align-items:flex-start}
+  .garden-card li::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--pink);margin-top:7px;flex:none}
+  .garden-card .sunimg{position:absolute;right:-30px;top:-20px;width:170px;opacity:.55;animation:spin 40s linear infinite}
+  .slots{display:grid;gap:12px}
+  .slot{background:#fff;border-radius:var(--r);padding:22px;border:3px solid var(--line);display:flex;gap:16px;align-items:center}
+  .slot .time{font:900 26px var(--display);color:var(--blue);white-space:nowrap}
+  .slot b{display:block}.slot small{color:var(--muted);font-weight:700}
+  @media(max-width:820px){.garden{grid-template-columns:minmax(0,1fr)}}
+
+  /* clubs */
+  .clubs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .club{background:#fff;border-radius:var(--r);padding:22px 20px 20px;display:flex;flex-direction:column;gap:10px;min-width:0;box-shadow:0 8px 20px rgba(26,80,140,.08);position:relative;overflow:hidden}
+  .club::before{content:"";position:absolute;inset:0 0 auto;height:8px;background:var(--c)}
+  .club .ico{width:56px;height:56px;border-radius:18px;background:var(--c);display:grid;place-items:center;color:#fff}
+  .club .ico svg{width:30px;height:30px}
+  .club h3{font-size:21px;font-weight:900;color:var(--ink)}
+  .club p{margin:0;color:var(--muted);font-weight:700;font-size:15px}
+  .when{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
+  .chip{background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--ink);font-weight:800;font-size:13px;padding:5px 10px;border-radius:999px}
+  .club .ask{margin-top:6px;align-self:flex-start;font:900 15px var(--body);color:var(--c);text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+  .club .ask:hover{text-decoration:underline}
+  @media(max-width:980px){.clubs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:600px){.clubs{grid-template-columns:minmax(0,1fr)}}
+
+  /* specialists + master classes */
+  .duo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .spec{border-radius:var(--r);padding:24px;color:#fff;display:flex;flex-direction:column;gap:10px;min-width:0}
+  .spec h3{font-size:24px;font-weight:900}
+  .spec p{margin:0;font-weight:700;opacity:.95}
+  .spec .tag{align-self:flex-start;background:rgba(255,255,255,.22);font-weight:900;font-size:13px;padding:5px 12px;border-radius:999px}
+  .spec .btn{margin-top:auto;align-self:flex-start;min-height:46px;font-size:15px}
+  @media(max-width:900px){.duo{grid-template-columns:minmax(0,1fr)}}
+
+  /* schedule */
+  .week{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .day{background:#fff;border-radius:22px;padding:14px;min-width:0;border:2px solid var(--line)}
+  .day h3{font-size:16px;font-weight:900;color:#fff;background:var(--c);border-radius:12px;padding:6px 10px;margin-bottom:10px;text-align:center}
+  .day ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .day li{font-size:14px;line-height:1.3;font-weight:700}
+  .day li b{display:block;color:var(--navy);font-variant-numeric:tabular-nums}
+  @media(max-width:1000px){.week{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:600px){.week{grid-template-columns:minmax(0,1fr)}}
+
+  /* contact */
+  .contact{background:var(--navy);color:#fff;border-radius:36px;padding:36px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center;position:relative;overflow:hidden;margin-bottom:28px}
+  .contact h2{font-size:clamp(28px,4vw,40px);font-weight:900}
+  .contact p{margin:10px 0 0;font-weight:700;opacity:.9}
+  .contact .rows{display:grid;gap:12px}
+  .crow{background:rgba(255,255,255,.1);border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+  .crow small{display:block;opacity:.75;font-weight:700;font-size:13px}
+  .crow>div{min-width:0;flex:1 1 180px}.crow b{font-size:19px;user-select:all;overflow-wrap:anywhere}
+  .crow a,.crow button{color:var(--navy);background:var(--sun);border:0;border-radius:999px;padding:8px 14px;font:900 14px var(--body);text-decoration:none;cursor:pointer}
+  .contact .sunimg{position:absolute;right:-40px;bottom:-60px;width:220px;opacity:.25;animation:spin 50s linear infinite}
+  @media(max-width:820px){.contact{grid-template-columns:minmax(0,1fr);padding:26px 20px}}
+  footer{padding-block:10px 40px;color:var(--muted);font-weight:700;font-size:14px;text-align:center}
+
+  @keyframes bob{50%{transform:translateY(-8px) rotate(-1deg)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+
+
+<header class="top">
+  <div class="wrap">
+    <a href="#home" aria-label="ღიმილი"><img src="./assets/logo.webp" alt="ღიმილი"></a>
+    <nav class="nav" aria-label="menu">
+      <a href="#garden" data-t="navGarden"></a><a href="#clubs" data-t="navClubs"></a><a href="#specialists" data-t="navSpec"></a><a href="#schedule" data-t="navSchedule"></a><a href="#contact" data-t="navContact"></a>
+    </nav>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lang-ka" data-lang="ka">ქარ</button><button type="button" id="lang-ru" data-lang="ru">РУС</button><button type="button" id="lang-en" data-lang="en">ENG</button>
+    </div>
+  </div>
+</header>
+
+<main id="home">
+  <div class="hero">
+    <span class="cloud c1"></span><span class="cloud c2"></span>
+    <div class="wrap">
+      <div>
+        <span class="eyebrow" data-t="eyebrow"></span>
+        <h1 data-t="heroTitle"></h1>
+        <p class="lead" data-t="heroLead"></p>
+        <div class="ctas">
+          <a class="btn btn-sun tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.6 3.3 2.9 10.5c-1.3.5-1.3 1.2-.2 1.6l4.8 1.5 1.8 5.6c.2.6.4.8.8.8.4 0 .6-.2.9-.5l2.3-2.2 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.7c.3-1.3-.5-1.9-1.3-1.5zM9.7 14l9-5.7c.4-.3.8-.1.5.2l-7.4 6.7-.3 3.1L9.7 14z"/></svg><span data-t="ctaSignup"></span></a>
+          <a class="btn btn-white tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener"><span data-t="ctaPrice"></span></a>
+          <a class="btn btn-pink" href="tel:+995557256038"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span data-t="call"></span></a>
+        </div>
+      </div>
+      <div class="hero-art"><img class="hero-logo" src="./assets/logo.webp" alt="ღიმილი — ბავშვის განვითარების ცენტრი"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="facts" id="facts"></div>
+
+    <section id="garden">
+      <div class="sec-head"><div><h2 data-t="gardenTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#e8178a" stroke-width="4" stroke-linecap="round"/></svg><p data-t="gardenLead"></p></div></div>
+      <div class="garden">
+        <div class="garden-card">
+          <img class="sunimg" src="./assets/sun.webp" alt="">
+          <h3 data-t="gardenCardTitle"></h3>
+          <ul id="gardenList"></ul>
+          <a class="btn btn-pink tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener"><span data-t="ctaSignup"></span></a>
+        </div>
+        <div class="slots" id="slots"></div>
+      </div>
+    </section>
+
+    <section id="clubs">
+      <div class="sec-head"><div><h2 data-t="clubsTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#22a83a" stroke-width="4" stroke-linecap="round"/></svg><p data-t="clubsLead"></p></div><a class="btn btn-sun tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener"><span data-t="ctaPrice"></span></a></div>
+      <div class="clubs" id="clubList"></div>
+    </section>
+
+    <section id="specialists">
+      <div class="sec-head"><div><h2 data-t="specTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#1a8fe0" stroke-width="4" stroke-linecap="round"/></svg><p data-t="specLead"></p></div></div>
+      <div class="duo" id="specList"></div>
+    </section>
+
+    <section id="schedule">
+      <div class="sec-head"><div><h2 data-t="schedTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#ffd21f" stroke-width="4" stroke-linecap="round"/></svg><p data-t="schedLead"></p></div></div>
+      <div class="week" id="week"></div>
+    </section>
+
+    <section id="contact">
+      <div class="contact">
+        <img class="sunimg" src="./assets/sun.webp" alt="">
+        <div>
+          <h2 data-t="contactTitle"></h2>
+          <p data-t="contactLead"></p>
+          <div class="ctas" style="margin-top:20px"><a class="btn btn-sun tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener"><span data-t="ctaSignup"></span></a><a class="btn btn-pink" href="tel:+995557256038"><span data-t="call"></span> · 557 256 038</a></div>
+        </div>
+        <div class="rows">
+          <div class="crow"><div><small data-t="lblAddress"></small><b data-t="address"></b></div><a href="https://www.google.com/maps/search/?api=1&amp;query=Chrelashvili+1+Tbilisi" target="_blank" rel="noopener" data-t="map"></a></div>
+          <div class="crow"><div><small data-t="lblPhone"></small><b><a id="phone" href="tel:+995557256038" style="text-decoration:none;color:#fff">557 256 038</a></b></div><a href="tel:+995557256038" data-t="call"></a></div>
+          <div class="crow"><div><small>Telegram</small><b>@centre_gimili</b></div><a class="tg" href="https://t.me/centre_gimili" target="_blank" rel="noopener" data-t="write"></a></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+<footer><div class="wrap" data-t="footer"></div></footer>
+
+<script>
+const TG = "https://t.me/centre_gimili";
+const C = { pink:"#e8178a", green:"#22a83a", blue:"#1a8fe0", navy:"#1b3cae", red:"#e5261f", sun:"#f5b400" };
+const ICON = {
+  craft:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>',
+  talk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg>',
+  abc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 6.5 7 10 17M4.3 13.5h4.4M13 7v10h3.5a2.5 2.5 0 0 0 0-5H13h3a2.5 2.5 0 0 0 0-5H13"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5zM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>',
+  math:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 4v6M4 7h6M14 7h6M15 15l4 4M19 15l-4 4M4 17h6"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  one:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>'
+};
+const DAYS = {
+  ka:["ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"],
+  ru:["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"],
+  en:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+};
+const SHORT = { ka:["ორშ","სამ","ოთხ","ხუთ","პარ","შაბ"], ru:["Пн","Вт","Ср","Чт","Пт","Сб"], en:["Mon","Tue","Wed","Thu","Fri","Sat"] };
+// days: 1=Mon … 6=Sat
+const CLUBS = [
+  { icon:"craft", c:C.pink, days:[4], time:"14:00 · 16:00",
+    name:{ka:"კრაფტი",ru:"Крафт",en:"Craft"},
+    text:{ka:"ხელნაკეთი ნამუშევრები, ფერები და ფანტაზია. ბაღის და სტუმარი ბავშვებისთვის.",ru:"Поделки, краски и фантазия. Для детей садика и гостей.",en:"Handmade crafts, colours and imagination. For garden kids and visitors."} },
+  { icon:"talk", c:C.blue, days:[2,6], time:"11:00–15:00",
+    name:{ka:"ინგლისური კლუბი 4+",ru:"Английский клуб 4+",en:"English club 4+"},
+    text:{ka:"ინგლისური თამაშით და საუბრით. შეიძლება ერთჯერადი ვიზიტიც.",ru:"Английский через игру и общение. Можно прийти разово.",en:"English through play and conversation. Single visits welcome."} },
+  { icon:"abc", c:C.green, days:[6], time:"11:00–12:00",
+    name:{ka:"ინგლისური ენა",ru:"Английский язык",en:"English lessons"},
+    text:{ka:"ინგლისურის გაკვეთილები ბავშვებისთვის შაბათობით.",ru:"Уроки английского для детей по субботам.",en:"English lessons for children on Saturdays."} },
+  { icon:"star", c:C.sun, days:[2,3], time:"16:30–17:30",
+    name:{ka:"განვითარება 4–5 წლის",ru:"Развитие 4–5 лет",en:"Development, age 4–5"},
+    text:{ka:"აზროვნება, მეტყველება და მოტორიკა 4–5 წლის ბავშვებისთვის.",ru:"Мышление, речь и моторика для детей 4–5 лет.",en:"Thinking, speech and motor skills for 4–5 year olds."} },
+  { icon:"book", c:C.red, days:[1,3,5], time:"16:30–18:00",
+    name:{ka:"სკოლისთვის მომზადება · ქართული სექტორი",ru:"Подготовка к школе · грузинский сектор",en:"School prep · Georgian sector"},
+    text:{ka:"კითხვა, წერა და ანგარიში პირველი კლასისთვის.",ru:"Чтение, письмо и счёт к первому классу.",en:"Reading, writing and counting for first grade."} },
+  { icon:"book", c:C.navy, days:[1,3,5], time:"16:30–18:00",
+    name:{ka:"სკოლისთვის მომზადება · რუსული სექტორი",ru:"Подготовка к школе · русский сектор",en:"School prep · Russian sector"},
+    text:{ka:"მომზადება რუსულენოვანი სკოლისთვის.",ru:"Подготовка к школе с обучением на русском.",en:"Preparation for Russian-language school."} },
+  { icon:"one", c:C.pink, days:[2,4], time:"16:30 · 17:30",
+    name:{ka:"პრე-სქული · ინდივიდუალური",ru:"Pre-school · индивидуально",en:"Pre-school · one to one"},
+    text:{ka:"ინდივიდუალური მომზადება სკოლისთვის, ბავშვის ტემპით.",ru:"Индивидуальная подготовка к школе в темпе ребёнка.",en:"One-to-one school preparation at the child's pace."} },
+  { icon:"math", c:C.green, days:[6], time:"11:00–13:00",
+    name:{ka:"მენტალური არითმეტიკა",ru:"Ментальная арифметика",en:"Mental arithmetic"},
+    text:{ka:"სწრაფი გონებრივი ანგარიში, ყურადღება და მეხსიერება.",ru:"Быстрый счёт в уме, внимание и память.",en:"Fast mental counting, focus and memory."} },
+  { icon:"math", c:C.blue, days:[1,2,3,4,5], time:"15:00–16:00", appt:true,
+    name:{ka:"მენტალური არითმეტიკა · ინდივიდუალური",ru:"Ментальная арифметика · индивидуально",en:"Mental arithmetic · one to one"},
+    text:{ka:"ინდივიდუალური გაკვეთილები, წინასწარი ჩაწერით.",ru:"Индивидуальные занятия по записи.",en:"Individual lessons by appointment."} },
+  { icon:"sun", c:C.sun, days:[6], time:"11:00–15:00",
+    name:{ka:"შაბათის ბაღი",ru:"Субботний садик",en:"Saturday garden"},
+    text:{ka:"თამაში, შემოქმედება და მეგობრები შაბათობით.",ru:"Игры, творчество и друзья по субботам.",en:"Play, creativity and friends on Saturdays."} },
+  { icon:"one", c:C.red, days:[], appt:true,
+    name:{ka:"ინდივიდუალური გაკვეთილი · 1 საათი",ru:"Индивидуальное занятие · 1 час",en:"Private lesson · 1 hour"},
+    text:{ka:"ერთ საათიანი ინდივიდუალური გაკვეთილი, წინასწარი ჩაწერით.",ru:"Индивидуальное занятие на час, по записи.",en:"A one-hour private lesson, by appointment."} }
+];
+const GARDEN_SLOTS = [
+  { time:"10:00–14:00", days:[1,2,3,4,5], label:{ka:"ნახევარი დღე",ru:"Полдня",en:"Half day"} },
+  { time:"10:00–16:00", days:[1,2,3,4,5], label:{ka:"სრული დღე",ru:"Полный день",en:"Full day"} }
+];
+const SPECS = [
+  { c:C.blue, name:{ka:"ლოგოპედი",ru:"Логопед",en:"Speech therapist"},
+    text:{ka:"მეტყველების განვითარება: გაკვეთილები, კონსულტაცია და ქცევაზე მუშაობა.",ru:"Развитие речи: занятия, консультации и работа с поведением.",en:"Speech development: lessons, consultations and behaviour support."} },
+  { c:C.pink, name:{ka:"ტომატისი",ru:"Томатис",en:"Tomatis"},
+    text:{ka:"ტომატისის მეთოდი: სმენითი სტიმულაციის კურსი.",ru:"Метод Томатис: курс слуховой стимуляции.",en:"The Tomatis method: an auditory stimulation course."} },
+  { c:C.green, mc:true, name:{ka:"მასტერკლასები",ru:"Мастер-классы",en:"Master classes"},
+    text:{ka:"მაგალითად, შოკოლადის მასტერკლასი. ახალ თარიღებს Telegram-ში ვაცხადებთ.",ru:"Например, шоколадный мастер-класс. Новые даты объявляем в Telegram.",en:"For example, a chocolate master class. New dates are announced on Telegram."} }
+];
+const T = {
+  ka:{ navGarden:"მინი-ბაღი", navClubs:"წრეები", navSpec:"სპეციალისტები", navSchedule:"განრიგი", navContact:"კონტაქტი",
+    eyebrow:"ბავშვის განვითარების ცენტრი · ისანი",
+    heroTitle:"ვსწავლობთ, ვთამაშობთ და ვიზრდებით <em>ღიმილით</em>",
+    heroLead:"მინი-ბაღი, წრეები, სკოლისთვის მომზადება, ინგლისური და სპეციალისტები ერთ თბილ და ფერად სივრცეში.",
+    ctaSignup:"ჩაწერა Telegram-ში", ctaPrice:"ფასის გაგება",
+    facts:[["2","მინი-ბაღის ჯგუფი"],["11","წრე და მიმართულება"],["6","დღე კვირაში"],["1:1","ინდივიდუალური გაკვეთილები"]],
+    gardenTitle:"მინი-ბაღი", gardenLead:"ორშაბათიდან პარასკევამდე, პატარა ჯგუფებში.", gardenCardTitle:"დღე, რომელიც ბავშვს უყვარს",
+    gardenList:["თამაში, შემოქმედება და მეგობრები","ბაღის ინგლისური სამშაბათს და ხუთშაბათს","კრაფტი ხუთშაბათობით","მომზადება სკოლისთვის თამაშით"],
+    clubsTitle:"წრეები", clubsLead:"აირჩიეთ ბავშვის ინტერესის მიხედვით. ფასს და თავისუფალ ადგილებს Telegram-ში გეტყვით.",
+    ask:"ფასის გაგება →", appt:"წინასწარი ჩაწერით",
+    specTitle:"სპეციალისტები", specLead:"ინდივიდუალური მუშაობა წინასწარი ჩაწერით.", specBtn:"ჩაწერა",
+    schedTitle:"კვირის განრიგი", schedLead:"მინი-ბაღი მუშაობს ორშაბათიდან პარასკევამდე, 10:00-დან. ინდივიდუალური გაკვეთილები შეთანხმებით.",
+    gardenShort:"მინი-ბაღი",
+    contactTitle:"მოდით გაგვიცანით!", contactLead:"დაგვიწერეთ Telegram-ში: გეტყვით ფასებს, თავისუფალ ადგილებს და ჩაგწერთ საცდელ გაკვეთილზე.",
+    lblAddress:"მისამართი", address:"ჭრელაშვილის ქ. 1, ისანი, თბილისი", map:"რუკაზე", lblPhone:"ტელეფონი", call:"დარეკვა", write:"მიწერა",
+    footer:"© ღიმილი · ბავშვის განვითარების ცენტრი, თბილისი" },
+  ru:{ navGarden:"Мини-садик", navClubs:"Кружки", navSpec:"Специалисты", navSchedule:"Расписание", navContact:"Контакты",
+    eyebrow:"Детский развивающий центр · Исани",
+    heroTitle:"Учимся, играем и растём <em>с улыбкой</em>",
+    heroLead:"Мини-садик, кружки, подготовка к школе, английский и специалисты в одном тёплом и ярком месте.",
+    ctaSignup:"Записаться в Telegram", ctaPrice:"Узнать цену",
+    facts:[["2","группы мини-садика"],["11","кружков и направлений"],["6","дней в неделю"],["1:1","индивидуальные занятия"]],
+    gardenTitle:"Мини-садик", gardenLead:"С понедельника по пятницу, в небольших группах.", gardenCardTitle:"День, который ребёнок любит",
+    gardenList:["Игры, творчество и друзья","Английский в садике по вторникам и четвергам","Крафт по четвергам","Подготовка к школе через игру"],
+    clubsTitle:"Кружки", clubsLead:"Выберите по интересам ребёнка. Цену и свободные места подскажем в Telegram.",
+    ask:"Узнать цену →", appt:"По записи",
+    specTitle:"Специалисты", specLead:"Индивидуальная работа по предварительной записи.", specBtn:"Записаться",
+    schedTitle:"Расписание на неделю", schedLead:"Мини-садик работает с понедельника по пятницу с 10:00. Индивидуальные занятия по договорённости.",
+    gardenShort:"Мини-садик",
+    contactTitle:"Приходите знакомиться!", contactLead:"Напишите нам в Telegram: расскажем о ценах и свободных местах и запишем на пробное занятие.",
+    lblAddress:"Адрес", address:"ул. Чрелашвили 1, Исани, Тбилиси", map:"На карте", lblPhone:"Телефон", call:"Позвонить", write:"Написать",
+    footer:"© ღიმილი · детский развивающий центр, Тбилиси" },
+  en:{ navGarden:"Mini garden", navClubs:"Clubs", navSpec:"Specialists", navSchedule:"Schedule", navContact:"Contact",
+    eyebrow:"Children's development centre · Isani",
+    heroTitle:"Learning, playing and growing <em>with a smile</em>",
+    heroLead:"Mini kindergarten, clubs, school preparation, English and specialists in one warm, colourful place.",
+    ctaSignup:"Sign up on Telegram", ctaPrice:"Ask the price",
+    facts:[["2","mini-garden groups"],["11","clubs and activities"],["6","days a week"],["1:1","private lessons"]],
+    gardenTitle:"Mini kindergarten", gardenLead:"Monday to Friday, in small groups.", gardenCardTitle:"A day children love",
+    gardenList:["Play, creativity and friends","Garden English on Tuesdays and Thursdays","Craft on Thursdays","School readiness through play"],
+    clubsTitle:"Clubs", clubsLead:"Choose by your child's interests. We'll share prices and free places on Telegram.",
+    ask:"Ask the price →", appt:"By appointment",
+    specTitle:"Specialists", specLead:"Individual sessions by appointment.", specBtn:"Book",
+    schedTitle:"Weekly schedule", schedLead:"The mini garden is open Monday to Friday from 10:00. Private lessons by arrangement.",
+    gardenShort:"Mini garden",
+    contactTitle:"Come and meet us!", contactLead:"Message us on Telegram: we'll tell you about prices and free places and book a trial lesson.",
+    lblAddress:"Address", address:"1 Chrelashvili St, Isani, Tbilisi", map:"Map", lblPhone:"Phone", call:"Call", write:"Message",
+    footer:"© ღიმილი (Gimili) · children's development centre, Tbilisi" }
+};
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const FACT_COLORS = [C.pink, C.green, C.blue, C.sun];
+function render(lang) {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el => { const v = t[el.dataset.t]; if (typeof v === "string") el.innerHTML = el.dataset.t === "heroTitle" ? v : esc(v); });
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  document.getElementById("facts").innerHTML = t.facts.map(([n, l], i) => `<div class="fact"><i style="background:${FACT_COLORS[i]}">${esc(n)}</i><div><b>${esc(l)}</b></div></div>`).join("");
+  document.getElementById("gardenList").innerHTML = t.gardenList.map(x => `<li>${esc(x)}</li>`).join("");
+  const dayRange = days => days.length === 5 ? `${SHORT[lang][0]}–${SHORT[lang][4]}` : days.map(d => SHORT[lang][d - 1]).join(" · ");
+  document.getElementById("slots").innerHTML = GARDEN_SLOTS.map((s, i) => `<div class="slot"><span class="time">${s.time}</span><div><b>${esc(s.label[lang])}</b><small>${esc(dayRange(s.days))}</small></div></div>`).join("");
+  document.getElementById("clubList").innerHTML = CLUBS.map(k => `<article class="club" style="--c:${k.c}"><span class="ico">${ICON[k.icon]}</span><h3>${esc(k.name[lang])}</h3><p>${esc(k.text[lang])}</p><div class="when">${k.days.length ? `<span class="chip">${esc(dayRange(k.days))}</span>` : ""}${k.time ? `<span class="chip">${esc(k.time)}</span>` : ""}${k.appt ? `<span class="chip">${esc(t.appt)}</span>` : ""}</div><a class="ask" href="${TG}" target="_blank" rel="noopener">${esc(t.ask)}</a></article>`).join("");
+  document.getElementById("specList").innerHTML = SPECS.map(s => `<article class="spec" style="background:${s.c}"><span class="tag">${esc(s.mc ? "Telegram" : t.appt)}</span><h3>${esc(s.name[lang])}</h3><p>${esc(s.text[lang])}</p><a class="btn btn-white" href="${TG}" target="_blank" rel="noopener">${esc(s.mc ? t.ask.replace(" →", "") : t.specBtn)}</a></article>`).join("");
+  const DAY_COLORS = [C.pink, C.green, C.blue, C.red, C.navy, C.sun];
+  document.getElementById("week").innerHTML = DAYS[lang].map((name, i) => {
+    const d = i + 1;
+    const items = [];
+    if (d <= 5) items.push([ "10:00–16:00", t.gardenShort ]);
+    CLUBS.filter(k => k.days.includes(d) && !k.appt).forEach(k => items.push([k.time, k.name[lang]]));
+    items.sort((a, b) => a[0].localeCompare(b[0]));
+    return `<div class="day" style="--c:${DAY_COLORS[i]}"><h3>${esc(name)}</h3><ul>${items.map(([tm, n]) => `<li><b>${esc(tm)}</b>${esc(n)}</li>`).join("")}</ul></div>`;
+  }).join("");
+  try { localStorage.setItem("gimili_site_lang", lang); } catch (_) {}
+}
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => render(b.dataset.lang)));
+let start = "ka";
+try { const saved = localStorage.getItem("gimili_site_lang"); if (T[saved]) start = saved; } catch (_) {}
+render(start);
+</script>
+
+</body>
+</html>
