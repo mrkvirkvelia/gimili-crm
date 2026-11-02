@@ -66,7 +66,8 @@
   .btn-pink{background:var(--pink);color:#fff;box-shadow:0 6px 0 #b80f6b}
   .btn-white{background:#fff;color:var(--navy);box-shadow:0 6px 0 var(--line)}
   .btn svg{width:22px;height:22px;flex:none}
-  .cloud{position:absolute;background:#fff;border-radius:999px;opacity:.85}
+  .cloud{position:absolute;background:#fff;border-radius:999px;opacity:.85;z-index:0;pointer-events:none}
+  .hero .wrap{position:relative;z-index:1}
   .cloud::before,.cloud::after{content:"";position:absolute;background:#fff;border-radius:50%}
   .c1{width:150px;height:44px;left:-30px;bottom:38px}.c1::before{width:70px;height:70px;left:30px;top:-34px}.c1::after{width:52px;height:52px;left:84px;top:-22px}
   .c2{width:120px;height:36px;right:6%;top:30px}.c2::before{width:56px;height:56px;left:20px;top:-28px}.c2::after{width:40px;height:40px;left:64px;top:-16px}
