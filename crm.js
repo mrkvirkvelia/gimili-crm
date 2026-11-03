@@ -77,6 +77,10 @@ function activeDuring(item, kind, from) {
   const off = dateKey(item?.inactiveFrom);
   return Boolean(off && from && off > from);
 }
+// A child (or a circle for a child) is billed only from the month it actually started:
+// activeFrom = date of joining / re-joining, activityStart[circleId] = date added to that circle.
+const startedBy = (child, month) => { const from = monthKey(child?.activeFrom); return !from || from <= month; };
+const circleStartedBy = (child, subject, month) => { const from = monthKey(child?.activityStart?.[subject?.id]); return !from || from <= month; };
 const activeLabel = (item, kind = '') => isActiveRecord(item, kind) ? 'აქტიური' : 'არააქტიური';
 const activePeople = (kind, rows = data[kind] || []) => rows.filter(item => isActiveRecord(item, kind));
 const filteredByParticipantStatus = (kind, rows) => participantStatusFilter === 'all' ? rows : rows.filter(item => isActiveRecord(item, kind) === (participantStatusFilter === 'active'));
@@ -89,6 +93,7 @@ async function toggleRecordActive(kind, id) {
   const item = get(kind, id); if (!item) return;
   const active = !isActiveRecord(item, kind);
   const patch = {active, inactiveFrom:active ? '' : today()};
+  if (active && kind === 'children') patch.activeFrom = today();
   if (kind === 'children') patch.status = active ? 'Активен' : 'Неактивен';
   try { await dataAdapter.update(kind, id, patch); go(current); toast(active ? 'სტატუსი: აქტიური' : 'სტატუსი: არააქტიური'); }
   catch (error) { toast(error.message); }
@@ -181,9 +186,9 @@ function courseMonth(child, subject) {
 }
 const withStart = (child, ids) => { const starts = { ...(child?.activityStart || {}) }; ids.forEach(id => { if (!starts[id]) starts[id] = today(); }); return starts; };
 function billingRows(month = paymentMonth) {
-  return data.children.filter(child => activeDuring(child, 'children', `${month}-01`)).flatMap(child => {
+  return data.children.filter(child => activeDuring(child, 'children', `${month}-01`) && startedBy(child, month)).flatMap(child => {
     const subjects = enrolledSubjects(child);
-    const rows=subjects.filter(subject => !isSettlementCircle(subject) && (!isCourseCircle(subject) || courseMonth(child,subject) === month)).map(subject => ({child,subject,...subjectBill(child,subject,month)}));
+    const rows=subjects.filter(subject => !isSettlementCircle(subject) && (isCourseCircle(subject) ? courseMonth(child,subject) === month : circleStartedBy(child, subject, month))).map(subject => ({child,subject,...subjectBill(child,subject,month)}));
     if (!usesBaseTariff(child)) return rows;
     const price = number(child.tariff) * (1-number(child.discount)/100);
     const paid = data.payments.filter(p => p.childId === child.id && !p.subjectId && monthKey(p.billingMonth || p.date) === month).reduce((sum,p)=>sum+number(p.amount),0);
@@ -1919,6 +1924,7 @@ function childForm(id) {
     values.active = values.active !== 'false';
     if (old && isActiveRecord(old,'children') && !values.active) values.inactiveFrom = today();
     if (values.active) values.inactiveFrom = '';
+    if (values.active && (!old || !isActiveRecord(old,'children'))) values.activeFrom = today();
     values.status = values.active ? 'Активен' : 'Неактивен';
     values.paymentDay = values.paymentDay ? day(values.paymentDay) : null;
     values.tariff = values.tariff === '' ? null : number(values.tariff);
