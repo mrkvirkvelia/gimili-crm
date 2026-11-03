@@ -195,6 +195,61 @@ function billingRows(month = paymentMonth) {
 function nextBillingDate(row, month = paymentMonth) {
   return billingDate(row.child, paidStatus(row.status) ? shiftMonth(month,1) : month);
 }
+// Per-lesson circles (craft, private lessons, Saturday garden…): money paid in advance is credit.
+// Each month: available = credit carried in + paid for this month; lessons attended use it up;
+// what is left carries to the next month, a shortfall is that month's debt (earlier debts stay in their own month).
+// Unused prepaid lessons: individual lessons carry over to the next month, group lessons expire at month end.
+const isIndividualCircle = subject => isAppointmentCircle(subject) || /ინდივიდუალ|индивидуал|individual|1:1/i.test(String(subject?.name || ''));
+function perLessonLedger(child, subject, month) {
+  const carries = isIndividualCircle(subject);
+  const rate = perLessonRate(child, subject);
+  const pays = data.payments.filter(p => p.childId === child.id && p.subjectId === subject.id);
+  const visits = data.attendance.filter(item => wasPresent(item) && item.subjectId === subject.id && (item.childId === child.id || (!item.childId && item.name === child.name)));
+  const payMonth = p => monthKey(p.billingMonth || p.date);
+  const months = [...pays.map(payMonth), ...visits.map(v => monthKey(v.date)), month].filter(Boolean).sort();
+  let credit = 0, row = null;
+  for (let m = months[0]; m <= month; m = shiftMonth(m, 1)) {
+    const paidIn = pays.filter(p => payMonth(p) === m).reduce((sum, p) => sum + number(p.amount), 0);
+    const lessons = visits.filter(v => monthKey(v.date) === m).length, charged = rate === null ? 0 : lessons * rate;
+    const carriedIn = carries ? credit : 0, available = carriedIn + paidIn;
+    credit = Math.max(0, available - charged);
+    row = { rate, lessons, charged, paidIn, carriedIn, available, remaining: Math.max(0, charged - available), credit };
+  }
+  return { ...row, carries, lessonsLeft: rate ? Math.floor(row.credit / rate + 1e-9) : 0, lessonsPaid: rate ? Math.floor(row.available / rate + 1e-9) : 0 };
+}
+function scheduledLessons(subject, month) {
+  const weekdays = toList(subject.weekdays).map(Number); if (!weekdays.length) return 4;
+  const [y, m] = month.split('-').map(Number), days = new Date(y, m, 0).getDate();
+  return Array.from({ length: days }, (_, i) => new Date(y, m - 1, i + 1).getDay()).filter(wd => weekdays.includes(wd)).length || 4;
+}
+function prepayForm(childId, subjectId, month = paymentMonth) {
+  const child = get('children', childId), subject = get('clubs', subjectId); if (!child || !subject) return;
+  const rate = perLessonRate(child, subject);
+  if (rate === null) return toast('ჯერ მიუთითეთ გაკვეთილის ფასი');
+  if (isClosedMonth(month)) return toast(`${prettyMonth(month)} დახურულია`);
+  const lessons = scheduledLessons(subject, month);
+  openForm(`${child.name} · ${subject.name} · წინასწარ`, [
+    { name:'month', label:'რომელი თვისთვის', type:'month', required:true },
+    { name:'lessons', label:`გაკვეთილების რაოდენობა (× ${money(rate)})`, type:'number', required:true },
+    { name:'amount', label:'თანხა, ₾', type:'number', required:true },
+    { name:'date', label:'გადახდის თარიღი', type:'date', required:true },
+    { name:'method', label:'გადახდის მეთოდი', type:'select', options:[['cash','ნაღდი'],['transfer','გადარიცხვა'],['card','ბარათი'],['other','სხვა']] },
+  ], async values => {
+    const n = Math.max(0, Math.round(number(values.lessons))), amount = number(values.amount), bm = monthKey(values.month) || month;
+    if (amount <= 0) throw new Error('თანხა ნულზე მეტი უნდა იყოს');
+    if (isClosedMonth(bm)) throw new Error(`${prettyMonth(bm)} დახურულია`);
+    assertOpen(values.date, 'გადახდა');
+    await dataAdapter.create('payments', { childId, child: child.name, subjectId, amount, date: values.date, billingMonth: bm, method: values.method, prepaidLessons: n, comment: `წინასწარ · ${n} გაკვეთილი` });
+    closeModal(); go(current); toast(`შენახულია · ${n} გაკვეთილი · ${money(amount)}`);
+  }, { month, lessons, amount: lessons * rate, date: today(), method: 'cash' });
+  let amountTouched = false;
+  $('field-amount')?.addEventListener('input', () => { amountTouched = true; });
+  $('field-lessons')?.addEventListener('input', () => { if (!amountTouched) $('field-amount').value = Math.max(0, Math.round(number($('field-lessons').value))) * rate; });
+}
+function prepaySummary(child, subject, month) {
+  const led = perLessonLedger(child, subject, month); if (led.rate === null) return '';
+  return `<div class="prepay-line"><span>გადახდილია <b>${money(led.available)}</b>${led.carriedIn ? ` <small>(${money(led.carriedIn)} წინა თვიდან)</small>` : ''} · ჩატარდა <b>${led.lessons}</b> · დარჩა <b>${led.lessonsLeft}</b> გაკვ.${led.lessonsLeft ? ` <small>(${led.carries ? 'გადავა შემდეგ თვეზე' : 'თვის ბოლოს იწვება'})</small>` : ''}${led.remaining ? ` · <b class="danger-text">ვალი ${money(led.remaining)}</b>` : ''}</span></div>`;
+}
 function subjectBill(child, subject, month = paymentMonth) {
   if (isCourseCircle(subject)) {
     const start = courseMonth(child, subject), override = child.activityPrices?.[subject.id];
@@ -202,6 +257,12 @@ function subjectBill(child, subject, month = paymentMonth) {
     const paid = subjectPayments(child.id, subject.id, start);
     return { price, paid, courseMonth: start, remaining: price === null ? null : Math.max(0, price - paid),
       status: price === null ? 'Укажите цену' : price === 0 ? 'Бесплатно' : paid >= price ? 'Оплачено' : paid > 0 ? 'Частично' : 'Надо оплатить' };
+  }
+  if (isPerLessonCircle(subject, child)) {
+    const led = perLessonLedger(child, subject, month);
+    if (led.rate === null) return { price: null, paid: led.paidIn, remaining: null, status: 'Укажите цену', ledger: led };
+    const status = led.remaining > 0 ? (led.available > 0 ? 'Частично' : 'Надо оплатить') : led.charged > 0 || led.available > 0 ? 'Оплачено' : 'Нет начислений';
+    return { price: led.charged, paid: led.paidIn, remaining: led.remaining, status, ledger: led };
   }
   const price = subjectPrice(child, subject, month);
   const paid = subjectPayments(child.id, subject.id, month);
@@ -1013,7 +1074,7 @@ function childProfile() {
   const childPayments=[...data.payments].filter(item=>item.childId===c.id).sort((a,b)=>dateKey(b.date).localeCompare(dateKey(a.date))).slice(0,8);
   const childAttendance=[...data.attendance].filter(item=>item.childId===c.id||(!item.childId&&item.name===c.name)).sort((a,b)=>dateKey(b.date).localeCompare(dateKey(a.date))).slice(0,8);
   const activityHistory=`<section class="section card"><div class="section-title"><h2>ისტორია</h2><button class="btn small secondary" onclick="paymentForm('${esc(c.id)}')">＋ გადახდა</button></div>${childPayments.length?`<h3 class="history-title">გადახდები</h3><div class="compact-history">${childPayments.map(item=>`<button onclick="paymentForm('${esc(c.id)}','${esc(item.id)}')"><span><b>${esc(item.subjectId?subjectName(item.subjectId):'საერთო გადახდა')}</b><small>${esc(dateKey(item.date)||'თარიღი არ არის')} · ${esc(paymentMethodLabel(item.method))}${item.billingMonth&&monthKey(item.billingMonth)!==monthKey(item.date)?` · ${esc(prettyMonth(monthKey(item.billingMonth)))}-ისთვის`:''}${childPayments.filter(other=>other!==item&&(other.subjectId||'')===(item.subjectId||'')&&monthKey(other.billingMonth||other.date)===monthKey(item.billingMonth||item.date)).length?' · <b class="danger-text">ამ თვეში ორჯერ</b>':''}</small></span><strong>${money(item.amount)}</strong></button>`).join('')}</div>`:'<p class="meta">გადახდების ისტორია ჯერ არ არის.</p>'}${childAttendance.length?`<h3 class="history-title">დასწრება</h3><div class="compact-history">${childAttendance.map(item=>`<button onclick="editSimple('attendance','${esc(item.id)}')"><span><b>${esc(subjectName(item.subjectId))}</b><small>${esc(dateKey(item.date)||'თარიღი არ არის')}</small></span><strong>${esc(attendanceStatusLabel(item.status))}</strong></button>`).join('')}</div>`:''}</section>`;
-  return `${head('ბავშვის ბარათი','ბავშვები / პროფილი',`<button class="btn small" onclick="childForm('${esc(c.id)}')">შეცვლა</button>`)}<button class="text-back" onclick="go('children')">← ყველა ბავშვი</button><section class="profile-hero ${isActiveRecord(c,'children')?'':'record-inactive'}"><div class="profile-avatar">${esc((c.name||'?').slice(0,1))}</div><div class="profile-identity"><h2>${esc(c.name)}</h2><span>${activeLabel(c,'children')}</span></div><button class="record-switch hero-switch ${isActiveRecord(c,'children')?'on':'off'}" onclick="toggleRecordActive('children','${esc(c.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${isActiveRecord(c,'children')?'გამორთვა':'ჩართვა'}</span></button></section>${oldDebtsBlock(c.id)}${parentsBlock(c)}${legacyPaymentCard}<section class="section card"><div class="section-title"><h2>წრეები · ${subjects.length}</h2><button class="btn small secondary" onclick="go('clubs')">ყველა წრე →</button></div><div class="billing-month"><span>${esc(prettyMonth(paymentMonth))}</span><button class="btn small secondary" onclick="paymentDayForm('${esc(c.id)}','${paymentMonth}')">გადახდის დღე: ${paymentDayFor(c,paymentMonth)||'?'}${(c.paymentDayOverrides||{})[paymentMonth]?' *':''} ✎</button><button class="btn small secondary" onclick="shiftPaymentMonth(-1)">‹</button><button class="btn small secondary" onclick="shiftPaymentMonth(1)">›</button></div>${subjects.length?`<div class="subject-list">${subjects.map(subject=>{const bill=subjectBill(c,subject),complete=paidStatus(bill.status);return `<div class="subject-line ${complete?'bill-paid':''}"><div class="subject-line-head"><div><b>${esc(subject.name)}</b><small>${esc(teacherName(subject))}</small></div><span class="pay-status ${complete?'paid':bill.status==='Частично'?'partial':'due'}">${billStatusLabel(bill.status)}</span></div>${circleChargeMeta(c,subject,bill,paymentMonth)}<div class="subject-line-bottom">${circlePriceControl(c,subject,bill)}${isFlexibleCircle(subject)&&childBillingMode(c,subject)==='per_lesson'?`<button class="btn small secondary" onclick="dropInForm('${esc(c.id)}','${esc(subject.id)}')">＋ ვიზიტი</button>`:''}${hasVisitCalendar(subject,c)?`<button class="btn small secondary" onclick="visitCalendarMonth=null;visitCalendar('${esc(c.id)}','${esc(subject.id)}')">📅 დასწრება · ${childVisits(c.id,subject.id,paymentMonth).length}</button>`:''}<button class="btn small secondary" onclick="if(confirm('მოვხსნათ ბავშვი წრიდან „${esc(subject.name).replace(/'/g,'')}“? ისტორია შენარჩუნდება.'))toggleChildActivity('${esc(c.id)}','${esc(subject.id)}')">✕ მოხსნა</button>${bill.remaining>0&&isActiveRecord(c,'children')?`<button class="btn small" onclick="paymentForSubject('${esc(c.id)}','${esc(subject.id)}')">გადახდა ${money(bill.remaining)}</button>`:''}</div></div>`}).join('')}</div><p class="section-note" style="margin-top:12px">${isActiveRecord(c,'children')?`ამ თვეში დარჩენილი გადასახდელი: <b>${money(due)}</b>. ერთჯერადი მომსახურება ითვლება მხოლოდ დასწრებული ჩანაწერებით.`:'ბავშვი არააქტიურია — ახალი დარიცხვები და დასწრება გამორთულია. ისტორია შენარჩუნებულია.'}</p>`:'<p class="section-note">წრე ჯერ არ არის მინიჭებული. აირჩიეთ ქვემოთ.</p>'}<div class="activity-grid">${data.clubs.filter(a=>!enrolled.has(a.id)&&!isEvent(a)).map(a=>`<button class="activity-choice" onclick="toggleChildActivity('${esc(c.id)}','${esc(a.id)}')"><span>＋</span>${esc(a.name)}</button>`).join('')}</div>${c.clubs?`<p class="meta">ძველი ჩანაწერი: ${esc(c.clubs)}</p>`:''}</section><section class="section card"><div class="section-title"><h2>პირადი მონაცემები</h2></div><div class="profile-details">${details.map(([label,value])=>`<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`).join('')}</div>${c.comment?`<p class="profile-comment">${esc(c.comment)}</p>`:''}</section>${activityHistory}`;
+  return `${head('ბავშვის ბარათი','ბავშვები / პროფილი',`<button class="btn small" onclick="childForm('${esc(c.id)}')">შეცვლა</button>`)}<button class="text-back" onclick="go('children')">← ყველა ბავშვი</button><section class="profile-hero ${isActiveRecord(c,'children')?'':'record-inactive'}"><div class="profile-avatar">${esc((c.name||'?').slice(0,1))}</div><div class="profile-identity"><h2>${esc(c.name)}</h2><span>${activeLabel(c,'children')}</span></div><button class="record-switch hero-switch ${isActiveRecord(c,'children')?'on':'off'}" onclick="toggleRecordActive('children','${esc(c.id)}')" aria-label="სტატუსის შეცვლა"><i></i><span>${isActiveRecord(c,'children')?'გამორთვა':'ჩართვა'}</span></button></section>${oldDebtsBlock(c.id)}${parentsBlock(c)}${legacyPaymentCard}<section class="section card"><div class="section-title"><h2>წრეები · ${subjects.length}</h2><button class="btn small secondary" onclick="go('clubs')">ყველა წრე →</button></div><div class="billing-month"><span>${esc(prettyMonth(paymentMonth))}</span><button class="btn small secondary" onclick="paymentDayForm('${esc(c.id)}','${paymentMonth}')">გადახდის დღე: ${paymentDayFor(c,paymentMonth)||'?'}${(c.paymentDayOverrides||{})[paymentMonth]?' *':''} ✎</button><button class="btn small secondary" onclick="shiftPaymentMonth(-1)">‹</button><button class="btn small secondary" onclick="shiftPaymentMonth(1)">›</button></div>${subjects.length?`<div class="subject-list">${subjects.map(subject=>{const bill=subjectBill(c,subject),complete=paidStatus(bill.status);return `<div class="subject-line ${complete?'bill-paid':''}"><div class="subject-line-head"><div><b>${esc(subject.name)}</b><small>${esc(teacherName(subject))}</small></div><span class="pay-status ${complete?'paid':bill.status==='Частично'?'partial':'due'}">${billStatusLabel(bill.status)}</span></div>${circleChargeMeta(c,subject,bill,paymentMonth)}<div class="subject-line-bottom">${circlePriceControl(c,subject,bill)}${isFlexibleCircle(subject)&&childBillingMode(c,subject)==='per_lesson'?`<button class="btn small secondary" onclick="dropInForm('${esc(c.id)}','${esc(subject.id)}')">＋ ვიზიტი</button>`:''}${hasVisitCalendar(subject,c)?`<button class="btn small secondary" onclick="visitCalendarMonth=null;visitCalendar('${esc(c.id)}','${esc(subject.id)}')">📅 დასწრება · ${childVisits(c.id,subject.id,paymentMonth).length}</button>`:''}${hasVisitCalendar(subject,c)&&isPerLessonCircle(subject,c)&&perLessonRate(c,subject)!==null?`<button class="btn small secondary" onclick="prepayForm('${esc(c.id)}','${esc(subject.id)}','${paymentMonth}')">₾ წინასწარ${(()=>{const l=perLessonLedger(c,subject,paymentMonth);return l.lessonsLeft?` · დარჩა ${l.lessonsLeft}`:'';})()}</button>`:''}<button class="btn small secondary" onclick="if(confirm('მოვხსნათ ბავშვი წრიდან „${esc(subject.name).replace(/'/g,'')}“? ისტორია შენარჩუნდება.'))toggleChildActivity('${esc(c.id)}','${esc(subject.id)}')">✕ მოხსნა</button>${bill.remaining>0&&isActiveRecord(c,'children')?`<button class="btn small" onclick="paymentForSubject('${esc(c.id)}','${esc(subject.id)}')">გადახდა ${money(bill.remaining)}</button>`:''}</div></div>`}).join('')}</div><p class="section-note" style="margin-top:12px">${isActiveRecord(c,'children')?`ამ თვეში დარჩენილი გადასახდელი: <b>${money(due)}</b>. ერთჯერადი მომსახურება ითვლება მხოლოდ დასწრებული ჩანაწერებით.`:'ბავშვი არააქტიურია — ახალი დარიცხვები და დასწრება გამორთულია. ისტორია შენარჩუნებულია.'}</p>`:'<p class="section-note">წრე ჯერ არ არის მინიჭებული. აირჩიეთ ქვემოთ.</p>'}<div class="activity-grid">${data.clubs.filter(a=>!enrolled.has(a.id)&&!isEvent(a)).map(a=>`<button class="activity-choice" onclick="toggleChildActivity('${esc(c.id)}','${esc(a.id)}')"><span>＋</span>${esc(a.name)}</button>`).join('')}</div>${c.clubs?`<p class="meta">ძველი ჩანაწერი: ${esc(c.clubs)}</p>`:''}</section><section class="section card"><div class="section-title"><h2>პირადი მონაცემები</h2></div><div class="profile-details">${details.map(([label,value])=>`<div><small>${esc(label)}</small><b>${esc(value)}</b></div>`).join('')}</div>${c.comment?`<p class="profile-comment">${esc(c.comment)}</p>`:''}</section>${activityHistory}`;
 }
 // ---------- Visit calendar (craft, Saturday kindergarten): each marked day = one paid visit ----------
 const hasVisitCalendar = (subject, child = null) => isCraftCircle(subject) || /შაბათის ბაღი/i.test(String(subject?.name || '')) || subject?.billingType === 'per_lesson' || (isFlexibleCircle(subject) && child && childBillingMode(child, subject) === 'per_lesson');
@@ -1037,7 +1098,8 @@ function visitCalendar(childId, subjectId, month = visitCalendarMonth || payment
   <div class="visit-grid visit-head">${['ორშ','სამ','ოთხ','ხუთ','პარ','შაბ','კვ'].map(d => `<span>${d}</span>`).join('')}</div>
   <div class="visit-grid">${Array.from({ length: first }, () => '<span></span>').join('')}${cells}</div>
   <div class="visit-total"><span>${marked.size} დასწრება × ${rate === null ? 'ფასი ?' : money(rate)}${isCraftCircle(subject) ? ` <small>(${esc(participantTypeLabel(participantType(child, subject)))})</small>` : ''}</span><strong>${total === null ? '—' : money(total)}</strong></div>
-  <div class="form-actions"><button class="btn" type="button" onclick="closeModal();visitCalendarMonth=null;go(current)">მზადაა</button></div>`;
+  ${prepaySummary(child, subject, month)}
+  <div class="form-actions">${closed || rate === null ? '' : `<button class="btn secondary" type="button" onclick="prepayForm('${esc(childId)}','${esc(subjectId)}','${month}')">₾ წინასწარ თვეზე</button>`}<button class="btn" type="button" onclick="closeModal();visitCalendarMonth=null;go(current)">მზადაა</button></div>`;
   $("modal").classList.remove('hidden');
 }
 // one-time visit: came and paid on the spot (e.g. English club, 60 ₾)
