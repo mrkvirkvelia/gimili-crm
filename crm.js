@@ -1090,6 +1090,24 @@ function depositHint(childOf, exceptPaymentId = '') {
   const sync = () => { const id = childOf(), on = method.value === 'deposit'; hint.hidden = !on; if (on) hint.textContent = id ? `დეპოზიტზე: ${money(depositBalance(id, exceptPaymentId))}` : 'ახალ ბავშვს დეპოზიტი არ აქვს'; };
   method.addEventListener('change', sync); $('field-childId')?.addEventListener('change', sync); sync();
 }
+// From the "დამატება" menu: same form with a child picker.
+function depositQuickForm() {
+  const pool = activePeople('children'); if (!pool.length) return toast('ჯერ დაამატეთ აქტიური ბავშვი');
+  openForm('დეპოზიტზე შეტანა', [
+    {name:'childId',label:'ბავშვი',type:'select',required:true,options:pool.map(c => [c.id, c.name])},
+    {name:'amount',label:'თანხა, ₾',type:'number',required:true},{name:'date',label:'თარიღი',type:'date',required:true},
+    {name:'method',label:'გადახდის მეთოდი',type:'select',options:CASH_METHODS},{name:'comment',label:'კომენტარი (არასავალდებულო)'},
+  ], async values => {
+    const child = get('children', values.childId), amount = number(values.amount);
+    if (!child) throw new Error('აირჩიეთ ბავშვი'); if (amount <= 0) throw new Error('თანხა ნულზე მეტი უნდა იყოს');
+    await dataAdapter.create('deposits', { childId: child.id, child: child.name, type: 'in', amount, date: values.date, method: values.method, comment: values.comment || '' });
+    go(current); toast(`${child.name} · დეპოზიტზე შევიდა ${money(amount)} · სულ ${money(depositBalance(child.id))}`);
+  }, { childId: current === 'childProfile' && pool.some(c => c.id === currentChildId) ? currentChildId : pool[0].id, date: today(), method: 'cash' });
+  const sel = $('field-childId'); if (!sel) return;
+  sel.closest('.field').insertAdjacentHTML('beforeend', '<small class="meta deposit-hint"></small>');
+  const sync = () => { sel.closest('.field').querySelector('.deposit-hint').textContent = `ახლა დეპოზიტზე: ${money(depositBalance(sel.value))}`; };
+  sel.addEventListener('change', sync); sync();
+}
 function depositForm(childId, type = 'in', id = '') {
   const child = get('children', childId), old = id ? (data.deposits || []).find(item => item.id === id) : null; if (!child) return;
   type = old?.type || type;
@@ -2254,6 +2272,7 @@ function quickAdd() {
   $("modalForm").innerHTML = `<div class="quick-add">
     <button type="button" class="quick-add-button" onclick="quickAddAction('child')"><span class="quick-add-icon" style="--action-bg:#eaf3ff;--action-color:#176fe5"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3"/><path d="M4 19c.6-4 2.6-6 6-6s5.4 2 6 6M19 8v6M16 11h6"/></svg></span><span class="quick-add-copy"><b>ახალი ბავშვი</b><small>ბარათი, მშობელი, საგნები და ტარიფი</small></span><span class="quick-add-arrow">›</span></button>
     <button type="button" class="quick-add-button" onclick="quickAddAction('payment')"><span class="quick-add-icon" style="--action-bg:#e5f8eb;--action-color:#169049"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M8 15h4"/></svg></span><span class="quick-add-copy"><b>გადახდა</b><small>ბავშვი, საგანი, თანხა და თარიღი</small></span><span class="quick-add-arrow">›</span></button>
+    <button type="button" class="quick-add-button" onclick="quickAddAction('deposit')"><span class="quick-add-icon" style="--action-bg:#e3f6f4;--action-color:#0f8a7e"><svg viewBox="0 0 24 24"><path d="M4 9l8-5 8 5v2H4z"/><path d="M6 11v6M10 11v6M14 11v6M18 11v6M3 20h18"/></svg></span><span class="quick-add-copy"><b>დეპოზიტი</b><small>მშობელმა წინასწარ დატოვა თანხა</small></span><span class="quick-add-arrow">›</span></button>
     <button type="button" class="quick-add-button" onclick="quickAddAction('expense')"><span class="quick-add-icon" style="--action-bg:#fff0f6;--action-color:#d82f87"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4zM4 10h16M8 15h5"/><path d="M8 4v3M16 4v3"/></svg></span><span class="quick-add-copy"><b>ხარჯი</b><small>კატეგორია, თანხა და თარიღი</small></span><span class="quick-add-arrow">›</span></button>
     <button type="button" class="quick-add-button" onclick="quickAddAction('event')"><span class="quick-add-icon" style="--action-bg:#fff0e0;--action-color:#c2620a"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg></span><span class="quick-add-copy"><b>მასტერკლასი</b><small>ფასი, წამყვანის წილი და ბავშვები</small></span><span class="quick-add-arrow">›</span></button>
     <button type="button" class="quick-add-button" onclick="quickAddAction('dropin')"><span class="quick-add-icon" style="--action-bg:#fff6dd;--action-color:#b07800"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20c.6-4 2.6-6 6-6s5.4 2 6 6"/><path d="M18 4v4M16 6h4"/></svg></span><span class="quick-add-copy"><b>ერთჯერადი ვიზიტი</b><small>მოვიდა და გადაიხადა — მაგ. ინგლისური კლუბი ₾60</small></span><span class="quick-add-arrow">›</span></button>
@@ -2264,7 +2283,7 @@ function quickAdd() {
 }
 function quickAddAction(type) {
   closeModal();
-  setTimeout(() => ({child:childForm,payment:paymentForm,expense:()=>editSimple('expenses'),tomatis:addTomatisSession,dropin:()=>dropInForm(),event:()=>eventForm()}[type]?.()), 90);
+  setTimeout(() => ({child:childForm,payment:paymentForm,expense:()=>editSimple('expenses'),tomatis:addTomatisSession,deposit:depositQuickForm,dropin:()=>dropInForm(),event:()=>eventForm()}[type]?.()), 90);
 }
 async function importSheet() {
   if (!confirm('Обновить все исходные колонки A–L из таблицы за сентябрь 2026? Изменённые карточки детей не будут перезаписаны.')) return;
