@@ -869,11 +869,13 @@ const paymentMonthOf = item => {
   if (!billed) return paidIn;
   return paidIn && paidIn > billed && isClosedMonth(billed) ? paidIn : billed;
 };
+// Accounting starts in October 2026: September was a trial month and is not shown anywhere.
+const CRM_START_MONTH = '2026-10';
 function accountingMonths() {
   const now = todayMonth(), keys = new Set([now]);
   data.payments.forEach(item => { const k = paymentMonthOf(item); if (k) keys.add(k); });
   data.expenses.forEach(item => { const k = monthKey(item.date); if (k) keys.add(k); });
-  const sorted = [...keys].filter(k => k <= now).sort();
+  const sorted = [...keys].filter(k => k <= now && k >= CRM_START_MONTH).sort();
   const out = []; for (let k = sorted[0]; k && k <= now; k = shiftMonth(k, 1)) out.push(k);
   return out;
 }
@@ -1440,7 +1442,7 @@ function payments() {
   const history=actual.map(p=>`<button class="row clickable transaction-row" onclick="paymentForm('${esc(p.childId)}','${esc(p.id)}')"><div class="pic" style="--accent:var(--green)">₾</div><div class="row-body"><div class="row-title">${esc(p.child||get('children',p.childId)?.name||'ბავშვი')}</div><div class="meta">${esc(p.subjectId?subjectName(p.subjectId):'საერთო გადახდა')} · ${esc(dateKey(p.date)||p.date||'')} · ${esc(paymentMethodLabel(p.method))}</div></div><b class="amount">${money(p.amount)}</b><span>›</span></button>`).join('');
   return `${head('გადახდები','ბავშვებისა და წრეების მიხედვით','<button class="btn icon-btn" onclick="paymentForm()" aria-label="გადახდის დამატება">＋</button>')}<div class="month-switch"><button onclick="shiftPaymentMonth(-1)" aria-label="წინა თვე">‹</button><b>${esc(prettyMonth(paymentMonth))}</b><button onclick="shiftPaymentMonth(1)" aria-label="შემდეგი თვე">›</button></div><div class="metrics payment-metrics"><div class="metric" style="--accent:var(--pink)"><span class="label">დარჩენილი გადასახდელი</span><strong>${money(dueTotal)}</strong><span class="delta">თვიური და ერთჯერადი დარიცხვები</span></div><div class="metric" style="--accent:var(--green)"><span class="label">დახურული დარიცხვა</span><strong>${paidCount} / ${bills.length}</strong><span class="delta">გადახდილი ან დარიცხვის გარეშე</span></div></div>${paymentMonth === todayMonth() ? oldDebtsBlock() : ''}<section class="section"><div class="section-title"><h2>გადახდის გრაფიკი</h2></div>${bills.length?`<div class="list">${cards}</div>`:empty('ფასიანი წრეები ან ტარიფები ჯერ არ არის')}</section><section class="section"><div class="section-title"><h2>თვის მიღებული გადახდები</h2></div>${actual.length?`<div class="list">${history}</div>`:empty('ამ თვეში გადახდები ჯერ არ არის')}</section>`;
 }
-function shiftPaymentMonth(count) { paymentMonth = shiftMonth(paymentMonth, count); go(current); }
+function shiftPaymentMonth(count) { const next = shiftMonth(paymentMonth, count); if (next < CRM_START_MONTH) return toast('აღრიცხვა იწყება 2026 წლის ოქტომბრიდან'); paymentMonth = next; go(current); }
 
 const leadStages = [["new", "Новая"], ["contact", "Связались"], ["trial", "Пробное"], ["came", "Пришли"], ["client", "Клиент"], ["reject", "Отказ"]];
 function leads() {
@@ -1796,7 +1798,7 @@ function monthList() {
   const keys = new Set([todayMonth()]);
   [...data.payments, ...data.expenses, ...data.attendance].forEach(item => { const key = monthKey(item.date); if (key && key <= todayMonth()) keys.add(key); });
   data.closings.forEach(item => keys.add(monthKey(item.month)));
-  return [...keys].filter(Boolean).sort().reverse();
+  return [...keys].filter(key => key && key >= CRM_START_MONTH).sort().reverse();
 }
 function monthsView() {
   const rows = monthList().map(month => {
