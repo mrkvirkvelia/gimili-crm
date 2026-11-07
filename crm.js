@@ -2022,7 +2022,8 @@ function statBars(list, labels = {}, base = null) {
 }
 function analytics() {
   const rows = statsRows(statsDays), { total, lists } = sumStats(rows);
-  const byDay = new Map(rows.map(row => [String(row.date || row.id), row]));
+  // one row per day normally; if a day ever has several rows, add them up
+  const byDay = new Map(); rows.forEach(row => { const d = String(row.date || row.id); const was = byDay.get(d) || {}; byDay.set(d, { visitors: number(was.visitors) + number(row.visitors), contacts: number(was.contacts) + number(row.contacts) }); });
   const days = Array.from({ length: statsDays }, (_, i) => addDays(today(), i - statsDays + 1));
   const peak = Math.max(1, ...days.map(d => number(byDay.get(d)?.visitors)));
   const conv = total.visitors ? Math.round(total.contacts / total.visitors * 1000) / 10 : 0;
