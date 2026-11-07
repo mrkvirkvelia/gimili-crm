@@ -496,7 +496,29 @@ const REVIEWS = [
           ka:"ბავშვი უდიდესი სიამოვნებით დადის! ვნანობთ, რომ ადრე არ დავიწყეთ.",
           en:"Our child absolutely loves it! We only regret not starting sooner."} },
 ];
+const STATS_URL = "";                 // own analytics (Gimili Analytics web app); empty = off
 // ───────────────────────────────────────────────────────────────────────
+// Own anonymous analytics: no cookies, no IP, no names — counts only. Sent in one small batch when the page is hidden.
+const stats = (() => {
+  const q = []; const on = !!STATS_URL && !navigator.webdriver;
+  const flush = () => { if (!on || !q.length) return; const body = JSON.stringify({ events: q.splice(0) }); try { if (!navigator.sendBeacon(STATS_URL, new Blob([body], { type: "text/plain" }))) fetch(STATS_URL, { method: "POST", body, mode: "no-cors", keepalive: true }); } catch (_) {} };
+  addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flush(); });
+  addEventListener("pagehide", flush);
+  return { push: (t, v, extra) => { if (on) q.push({ t, v, ...(extra || {}) }); }, flush };
+})();
+function trackVisit() {
+  const today = new Date().toISOString().slice(0, 10); let newDay = true, newEver = true;
+  try { newEver = !localStorage.getItem("gm_seen"); newDay = localStorage.getItem("gm_day") !== today; localStorage.setItem("gm_seen", "1"); localStorage.setItem("gm_day", today); } catch (_) {}
+  const params = new URLSearchParams(location.search), ua = navigator.userAgent, ref = document.referrer;
+  let src = params.get("from") || params.get("utm_source") || "";
+  if (!src) {
+    if (/Instagram/i.test(ua)) src = "instagram"; else if (/FBAN|FBAV|FB_IAB/i.test(ua)) src = "facebook";
+    else if (ref) { const h = (() => { try { return new URL(ref).hostname.replace(/^www\./, ""); } catch (_) { return ""; } })();
+      src = h === location.hostname ? "" : /instagram/.test(h) ? "instagram" : /facebook|fb\.com/.test(h) ? "facebook" : /google\./.test(h) ? "google" : /t\.me|telegram/.test(h) ? "telegram" : /whatsapp|wa\.me/.test(h) ? "whatsapp" : /tiktok/.test(h) ? "tiktok" : /yandex/.test(h) ? "yandex" : h; }
+  }
+  const dev = /iPad|Tablet/i.test(ua) || (innerWidth >= 700 && innerWidth < 1024 && "ontouchstart" in window) ? "tablet" : /Mobi|Android|iPhone/i.test(ua) ? "mobile" : "desktop";
+  stats.push("view", "", { newDay, newEver, src: src || "direct", dev, lang });
+}
 const TG = "https://t.me/centre_gimili";
 const C = { pink:"#e8178a", green:"#22a83a", blue:"#1a8fe0", navy:"#1b3cae", red:"#e5261f", sun:"#f5b400" };
 const ICON = {
@@ -703,8 +725,10 @@ function render(next) {
 
 // language, filters, day tabs, tiles
 document.addEventListener("click", e => {
-  const b = e.target.closest("[data-lang]"); if (b) return render(b.dataset.lang);
-  const f = e.target.closest("[data-cat]"); if (f) { cat = f.dataset.cat; return renderClubs(); }
+  const b = e.target.closest("[data-lang]"); if (b) { stats.push("lang", b.dataset.lang); return render(b.dataset.lang); }
+  const f = e.target.closest("[data-cat]"); if (f) { cat = f.dataset.cat; stats.push("filter", cat); return renderClubs(); }
+  const c = e.target.closest('a[href^="tel:"],a[href*="wa.me/"],a[href*="t.me/"]');
+  if (c && !c.hasAttribute("data-tg")) { stats.push("contact", /wa\.me/.test(c.href) ? "whatsapp" : /t\.me/.test(c.href) ? "telegram" : "call"); stats.flush(); }
   const d = e.target.closest("[data-day]"); if (d) { day = +d.dataset.day; return renderWeek(); }
   if (e.target.closest("#moreReviews")) { allReviews = true; document.querySelectorAll("#reviewList .review").forEach(x => x.hidden = false); $("moreReviews").parentElement.hidden = true; return; }
   const tile = e.target.closest("[data-filter]"); if (tile) { cat = tile.dataset.filter; renderClubs(); }
@@ -716,6 +740,7 @@ document.addEventListener("click", e => {
   const a = e.target.closest("[data-tg]"); if (!a) return;
   e.preventDefault(); setMenu(false);
   const what = a.dataset.what || (a.dataset.whatKey ? T[lang][a.dataset.whatKey] : "");
+  stats.push("book", a.dataset.what ? CLUBS.concat(SPECS).find(k => k.name[lang] === a.dataset.what)?.name.ka || what : what || "general");
   $("sheetWhat").textContent = what;
   $("optWa").href = "https://wa.me/995557256038?text=" + encodeURIComponent(T[lang].waHello + (what ? ` — ${what}` : "") + ".");
   setSheet(true);
@@ -735,12 +760,15 @@ addEventListener("scroll", onScroll, { passive: true }); onScroll();
 if ("IntersectionObserver" in window) {
   const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add("in"); } }), { threshold: 0.08 });
   document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+  const seen = new Set(), sio = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting && !seen.has(en.target.id)) { seen.add(en.target.id); stats.push("section", en.target.id); } }), { rootMargin: "0px 0px -40% 0px" });
+  document.querySelectorAll("main section[id]").forEach(s => sio.observe(s));
   const spy = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.dataset.sec === en.target.id)); }), { rootMargin: "-45% 0px -50% 0px" });
   document.querySelectorAll("main section[id]").forEach(s => spy.observe(s));
 } else document.querySelectorAll(".reveal").forEach(el => el.classList.add("in"));
 
 try { const saved = localStorage.getItem("gimili_site_lang"); if (T[saved]) lang = saved; } catch (_) {}
 render(lang);
+trackVisit();
 </script>
 </body>
 </html>

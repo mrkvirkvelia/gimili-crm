@@ -49,9 +49,14 @@ FIXTURE = {
         {'id': 'e2', 'title': 'ხელფასი · ნინო', 'category': 'ხელფასები', 'amount': 80, 'date': '2026-11-03', 'staffId': 't1', 'salaryMonth': '2026-10'},
     ],
     'settlements': [{'id': 'st1', 'staffId': 't4', 'subjectId': 'c4', 'date': '2026-11-12', 'total': 100, 'centerAmount': 40}],
+    'stats': [
+        {'id': '2026-11-19', 'date': '2026-11-19', 'views': 30, 'visitors': 20, 'newVisitors': 12, 'book': 6, 'contacts': 4, 'sources': {'instagram': 14, 'direct': 16}, 'contactBy': {'whatsapp': 3, 'call': 1}, 'bookWhat': {'კრაფტი': 4, 'general': 2}, 'sections': {'clubs': 18}},
+        {'id': '2026-11-20', 'date': '2026-11-20', 'views': 10, 'visitors': 8, 'newVisitors': 5, 'book': 2, 'contacts': 1, 'sources': {'instagram': 6, 'google': 4}, 'contactBy': {'telegram': 1}},
+        {'id': '2026-08-01', 'date': '2026-08-01', 'views': 99, 'visitors': 99},
+    ],
     'deposits': [], 'closings': [], 'schedule': [], 'leads': [], 'tasks': [], 'groups': [], 'parents': [],
 }
-VIEWS = ['dashboard', 'children', 'payments', 'expenses', 'accounting', 'reports', 'months', 'clubs', 'staff', 'attendance', 'schedule', 'parents', 'settings']
+VIEWS = ['analytics', 'dashboard', 'children', 'payments', 'expenses', 'accounting', 'reports', 'months', 'clubs', 'staff', 'attendance', 'schedule', 'parents', 'settings']
 
 
 class Server:
@@ -203,6 +208,16 @@ class CRMTest(unittest.TestCase):
         self.assertEqual(self.js("depositsHeld()"), 500)
         self.js("go('accounting')"); self.page.wait_for_timeout(100)
         self.assertEqual(self.js("accountingTotals().income"), before)
+
+    # ---------- website analytics ----------
+    def test_analytics_sums_the_chosen_period(self):
+        self.open(1366)
+        self.js("setStatsDays(7)")
+        tot = self.js("sumStats(statsRows(7)).total")
+        self.assertEqual((tot['visitors'], tot['views'], tot['contacts'], tot['book']), (28, 40, 5, 8))
+        self.assertEqual(self.js("sumStats(statsRows(7)).lists.sources.instagram"), 20)
+        text = self.page.inner_text('#view')
+        self.assertIn('Instagram', text); self.assertIn('WhatsApp', text); self.assertIn('17.9%', text)
 
     # ---------- months ----------
     def test_september_is_hidden(self):

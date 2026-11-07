@@ -1,5 +1,5 @@
 // Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia
-const sections = ["closings", "settlements", "deposits", "parents", "children", "staff", "leads", "payments", "expenses", "tasks", "groups", "clubs", "schedule", "attendance"];
+const sections = ["closings", "settlements", "deposits", "stats", "parents", "children", "staff", "leads", "payments", "expenses", "tasks", "groups", "clubs", "schedule", "attendance"];
 let data = Object.fromEntries(sections.map(key => [key, []]));
 let sourceRows = [];
 let signedInUser = null;
@@ -1987,6 +1987,71 @@ function circleProfile() {
   <section class="section card"><h2>ბავშვები · ${members.length}</h2>${members.length ? members.sort(byName).map(childRow).join('') : '<p class="meta">ბავშვები არ არიან</p>'}</section>
   <section class="section card"><h2>გადახდები ამ თვეში</h2>${received.length ? received.sort((a, c) => dateKey(a.date).localeCompare(dateKey(c.date))).map(p => `<div class="base-row"><span><b>${shortDate(dateKey(p.date))}</b> · ${esc(get('children', p.childId)?.name || p.child || '?')}${p.prepaidLessons ? ` · წინასწარ ${p.prepaidLessons} გაკვ.` : ''}${p.method === 'deposit' ? ' · დეპოზიტიდან' : ''}</span><strong>${money(p.amount)}</strong></div>`).join('') : '<p class="meta">გადახდები არ არის</p>'}</section>`;
 }
+// ---------- Website analytics (gimili.ge): own counter, one row per day in "CRM · stats" ----------
+let statsDays = 30;
+function setStatsDays(n) { statsDays = n; go('analytics'); }
+const STAT_LABELS = {
+  sources: { direct:'პირდაპირ', instagram:'Instagram', facebook:'Facebook', google:'Google', telegram:'Telegram', whatsapp:'WhatsApp', tiktok:'TikTok', yandex:'Yandex' },
+  devices: { mobile:'ტელეფონი', desktop:'კომპიუტერი', tablet:'პლანშეტი' },
+  langs: { ka:'ქართული', ru:'რუსული', en:'ინგლისური' },
+  contactBy: { whatsapp:'WhatsApp', telegram:'Telegram', call:'ზარი' },
+  sections: { garden:'მინი-ბაღი', clubs:'წრეები', specialists:'სპეციალისტები', team:'პედაგოგები', reviews:'შეფასებები', start:'როგორ დავიწყოთ', schedule:'განრიგი', faq:'კითხვები', contact:'კონტაქტი' },
+  filters: { all:'ყველა', art:'შემოქმედება', lang:'ენები', school:'სკოლისთვის', dev:'განვითარება', solo:'ინდივიდუალური' },
+};
+function statsRows(days) {
+  const from = addDays(today(), -(days - 1));
+  return (data.stats || []).filter(row => { const d = String(row.date || row.id || ''); return d >= from && d <= today(); });
+}
+function sumStats(rows) {
+  const total = { views:0, visitors:0, newVisitors:0, book:0, contacts:0 }, lists = {};
+  rows.forEach(row => {
+    Object.keys(total).forEach(k => { total[k] += number(row[k]); });
+    ['sources','devices','langs','sections','bookWhat','contactBy','filters'].forEach(list => {
+      const box = row[list]; if (!box || typeof box !== 'object') return;
+      lists[list] = lists[list] || {};
+      Object.entries(box).forEach(([k, v]) => { lists[list][k] = (lists[list][k] || 0) + number(v); });
+    });
+  });
+  return { total, lists };
+}
+function statBars(list, labels = {}, base = null) {
+  const rows = Object.entries(list || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (!rows.length) return '<p class="meta">ჯერ მონაცემები არ არის</p>';
+  const max = base || Math.max(...rows.map(r => r[1]));
+  return `<div class="stat-bars">${rows.map(([k, v]) => `<div class="stat-bar"><span>${esc(labels[k] || k)}</span><i style="--w:${Math.max(3, Math.round(v / max * 100))}%"></i><b>${v}${base ? ` <small>${Math.round(v / base * 100)}%</small>` : ''}</b></div>`).join('')}</div>`;
+}
+function analytics() {
+  const rows = statsRows(statsDays), { total, lists } = sumStats(rows);
+  const byDay = new Map(rows.map(row => [String(row.date || row.id), row]));
+  const days = Array.from({ length: statsDays }, (_, i) => addDays(today(), i - statsDays + 1));
+  const peak = Math.max(1, ...days.map(d => number(byDay.get(d)?.visitors)));
+  const conv = total.visitors ? Math.round(total.contacts / total.visitors * 1000) / 10 : 0;
+  const empty = !(data.stats || []).length;
+  return `${head('ანალიტიკა', 'gimili.ge · საიტის სტატისტიკა')}
+  <div class="status-tabs">${[7, 30, 90].map(n => `<button class="${statsDays === n ? 'active' : ''}" onclick="setStatsDays(${n})">${n} დღე</button>`).join('')}</div>
+  ${empty ? `<p class="section-note">სტატისტიკა ჯერ არ შემოსულა. ის ავტომატურად გამოჩნდება, როცა საიტის ანალიტიკა ჩაირთვება და პირველი სტუმრები შემოვლენ.</p>` : ''}
+  <section class="section card"><div class="profile-details stat-kpis">
+    <div><small>სტუმრები</small><b>${total.visitors}</b></div>
+    <div><small>ახალი სტუმრები</small><b>${total.newVisitors}</b></div>
+    <div><small>გვერდის ნახვები</small><b>${total.views}</b></div>
+    <div><small>„ჩაწერაზე“ დაჭერა</small><b>${total.book}</b></div>
+    <div><small>მოგვწერეს / დაგვირეკეს</small><b>${total.contacts}</b></div>
+    <div><small>კონვერსია (კონტაქტი / სტუმარი)</small><b>${conv}%</b></div>
+  </div></section>
+  <section class="section card"><h2>სტუმრები დღეების მიხედვით</h2>
+    <div class="stat-days">${days.map((d, i) => { const r = byDay.get(d) || {}; const v = number(r.visitors), c = number(r.contacts); return `<div title="${esc(d)} · სტუმარი ${v} · კონტაქტი ${c}"><i style="--h:${Math.round(v / peak * 100)}"></i>${c ? `<em style="--h:${Math.round(Math.min(c, v || c) / peak * 100)}"></em>` : ''}<small>${statsDays <= 7 || i % 5 === 0 || i === days.length - 1 ? esc(d.slice(8)) : ''}</small></div>`; }).join('')}</div>
+    <p class="meta"><span class="dot-v"></span> სტუმრები · <span class="dot-c"></span> მოგვწერეს / დაგვირეკეს</p></section>
+  <div class="stat-grid">
+    <section class="section card"><h2>საიდან მოვიდნენ</h2>${statBars(lists.sources, STAT_LABELS.sources)}</section>
+    <section class="section card"><h2>რაზე დააჭირეს „ჩაწერას“</h2>${statBars(lists.bookWhat, { general:'ზოგადი ჩაწერა' })}</section>
+    <section class="section card"><h2>როგორ დაგვიკავშირდნენ</h2>${statBars(lists.contactBy, STAT_LABELS.contactBy)}</section>
+    <section class="section card"><h2>რომელ განყოფილებამდე ჩავიდნენ</h2>${statBars(lists.sections, STAT_LABELS.sections, total.views || null)}</section>
+    <section class="section card"><h2>მოწყობილობა</h2>${statBars(lists.devices, STAT_LABELS.devices)}</section>
+    <section class="section card"><h2>ენა</h2>${statBars(lists.langs, STAT_LABELS.langs)}</section>
+    <section class="section card"><h2>წრეების ფილტრი</h2>${statBars(lists.filters, STAT_LABELS.filters)}</section>
+  </div>
+  <p class="section-note">მონაცემები ანონიმურია: სახელები, ტელეფონები და IP-მისამართები არ ინახება. ბმულს შეგიძლიათ დაუმატოთ ნიშანი, მაგ. <b>gimili.ge/?from=insta-reels</b> — მაშინ „საიდან მოვიდნენ“-ში ცალკე გამოჩნდება.</p>`;
+}
 const views = {
   dashboard, children, childProfile, contacts, payments, leads, reports, accounting, expenses, tasks, settings, sourceTable,
   staff: teachers,
@@ -1995,7 +2060,7 @@ const views = {
   schedule: calendar,
   attendance: attendanceView,
   months: monthsView,
-  staffProfile, circleProfile,
+  staffProfile, circleProfile, analytics,
   parents: parentsView,
 };
 
@@ -2024,7 +2089,7 @@ const NAV_GROUPS = [
   ['ბავშვები', [['children','☺','ბავშვები'],['parents','♡','მშობლები'],['attendance','✓','დასწრება'],['contacts','☎','კონტაქტები'],['leads','✉','განაცხადები']]],
   ['ცენტრი', [['clubs','✦','წრეები'],['staff','♙','თანამშრომლები']]],
   ['ფინანსები', [['payments','₾','გადახდები'],['expenses','−','ხარჯები'],['accounting','◫','ბუღალტერია'],['months','🔒','თვის დახურვა'],['reports','▤','სტატისტიკა']]],
-  ['სხვა', [['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']]],
+  ['სხვა', [['analytics','▲','ანალიტიკა'],['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']]],
 ];
 function navActive(id) { return id === current || (current === 'childProfile' && id === 'children'); }
 function renderDrawer() {
