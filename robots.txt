@@ -1,0 +1,7 @@
+# Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia
+User-agent: *
+Disallow: /crm
+Disallow: /crm.html
+Disallow: /login.html
+Disallow: /tests/
+Sitemap: https://gimili.ge/sitemap.xml

@@ -15,9 +15,12 @@
 <meta property="og:url" content="https://gimili.ge/">
 <meta property="og:title" content="ღიმილი · ბავშვთა განვითარების ცენტრი ისანში">
 <meta property="og:description" content="მინი-ბაღი, წრეები, სკოლისთვის მომზადება, ინგლისური და სპეციალისტები. ჩაეწერეთ საცდელ გაკვეთილზე.">
-<meta property="og:image" content="https://gimili.ge/site/assets/logo.webp">
+<meta property="og:image" content="https://gimili.ge/site/assets/share.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"ChildCare","name":"ღიმილი · Gimili","url":"https://gimili.ge/","telephone":"+995557256038","image":"https://gimili.ge/site/assets/logo.webp",
+{"@context":"https://schema.org","@type":"ChildCare","name":"ღიმილი · Gimili","url":"https://gimili.ge/","telephone":"+995557256038","image":"https://gimili.ge/site/assets/share.jpg","logo":"https://gimili.ge/site/assets/logo.webp",
  "address":{"@type":"PostalAddress","streetAddress":"Chrelashvili St 1","addressLocality":"Tbilisi","addressRegion":"Isani","addressCountry":"GE"},
  "openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"09:00","closes":"18:00"},{"@type":"OpeningHoursSpecification","dayOfWeek":"Saturday","opens":"11:00","closes":"15:00"}],
  "sameAs":["https://www.instagram.com/centri_ghimili/","https://www.facebook.com/share/1DfU3EqnLd/","https://t.me/centre_gimili"]}
@@ -42,7 +45,6 @@
   .wrap{width:min(100%,1140px);margin:0 auto;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
   h1,h2,h3{line-height:1.15;text-wrap:balance;margin:0}
   :focus-visible{outline:3px solid var(--navy);outline-offset:3px;border-radius:10px}
-  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   svg{flex:none}
 
   /* buttons */
@@ -53,7 +55,6 @@
   .b-sun{background:var(--sun);color:var(--navy);box-shadow:0 5px 0 var(--sun-deep)}
   .b-pink{background:var(--pink);color:#fff;box-shadow:0 5px 0 #b80f6b}
   .b-white{background:#fff;color:var(--navy);box-shadow:0 5px 0 var(--line)}
-  .b-navy{background:var(--navy);color:#fff;box-shadow:0 5px 0 #0f2479}
 
   /* header */
   .top{position:sticky;top:0;z-index:40;background:rgba(142,200,239,.94);backdrop-filter:blur(10px);padding-top:env(safe-area-inset-top);transition:box-shadow .2s}
@@ -66,13 +67,13 @@
   .tel-top{display:inline-flex;align-items:center;gap:6px;background:var(--pink);color:#fff;text-decoration:none;font:900 14px var(--font);padding:8px 13px;border-radius:999px;white-space:nowrap}
   .tel-top svg{width:15px;height:15px}
   .lang{display:flex;background:#fff;border-radius:999px;padding:3px;gap:2px}
-  .lang button{border:0;background:transparent;font:800 13px var(--font);color:var(--navy);padding:6px 9px;border-radius:999px;cursor:pointer}
+  .lang button{border:0;background:transparent;font:800 13px var(--font);color:var(--navy);padding:0 10px;min-height:38px;min-width:40px;border-radius:999px;cursor:pointer}
   .lang button[aria-pressed="true"]{background:var(--navy);color:#fff}
   .burger{display:none;width:44px;height:44px;border:0;border-radius:14px;background:#fff;color:var(--navy);cursor:pointer;place-items:center}
   .burger svg{width:24px;height:24px}
   @media(max-width:1020px){.nav{display:none}.burger{display:grid;order:4}.top .lang{margin-left:auto;order:2}.tel-top{order:3}}
-  @media(max-width:640px){.tel-top span{display:none}.tel-top{width:44px;height:44px;padding:0;justify-content:center;border-radius:14px}.tel-top svg{width:20px;height:20px}.top .lang button{padding:7px 8px}}
-  @media(max-width:400px){.brand img{height:32px}.top .wrap{gap:7px}.top .lang button{padding:7px 6px;font-size:12px}}
+  @media(max-width:640px){.tel-top span{display:none}.tel-top{width:44px;height:44px;padding:0;justify-content:center;border-radius:14px}.tel-top svg{width:20px;height:20px}.top .lang button{padding:0 8px;min-width:38px}}
+  @media(max-width:400px){.brand img{height:32px}.top .wrap{gap:7px}.top .lang button{padding:0 6px;min-width:34px;font-size:12px}}
 
   /* mobile menu */
   .drawer{position:fixed;inset:0;z-index:60;display:none}
@@ -176,6 +177,9 @@
   .spec .tag{align-self:flex-start;background:rgba(255,255,255,.22);font-weight:900;font-size:13px;padding:5px 12px;border-radius:999px}
   .spec .btn{margin-top:auto;align-self:flex-start;min-height:46px;font-size:15px}
   .spec .price{color:#fff}.spec .price small{color:rgba(255,255,255,.85)}
+  /* on yellow, text is dark blue — white on yellow is unreadable */
+  .spec.on-sun,.spec.on-sun .price,.spec.on-sun .who.light{color:var(--navy)}.spec.on-sun .price small{color:var(--ink)}.spec.on-sun .tag{background:rgba(255,255,255,.55)}
+  .club.on-sun .ico,.tile.on-sun .ic,.days button.on-sun[aria-pressed="true"],.day.on-sun h3,.steps li.on-sun::before{color:var(--navy)}
   @media(max-width:900px){.duo{grid-template-columns:minmax(0,1fr)}}
 
   /* steps */
@@ -243,7 +247,7 @@
   .crow{background:rgba(255,255,255,.1);border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
   .crow small{display:block;opacity:.75;font-weight:700;font-size:13px}
   .crow>div{min-width:0;flex:1 1 160px}.crow b{font-size:18px;overflow-wrap:anywhere}
-  .crow>a{color:var(--navy);background:var(--sun);border-radius:999px;padding:8px 14px;font:900 14px var(--font);text-decoration:none}
+  .crow>a{color:var(--navy);background:var(--sun);border-radius:999px;padding:0 16px;min-height:44px;display:inline-flex;align-items:center;font:900 14px var(--font);text-decoration:none}
   .map{border-radius:24px;overflow:hidden;min-height:320px;background:#2a4bbf;position:relative}
   .map iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
   .contact .sunimg{position:absolute;left:-60px;bottom:-70px;width:200px;opacity:.2;animation:spin 50s linear infinite;pointer-events:none}
@@ -659,17 +663,17 @@ const dayRange = days => days.length === 5 ? `${SHORT[lang][0]}–${SHORT[lang][
 function renderClubs() {
   const t = T[lang];
   $("filters").innerHTML = t.cats.map(([k, l]) => `<button type="button" data-cat="${k}" aria-pressed="${k === cat}">${esc(l)}</button>`).join("");
-  $("clubList").innerHTML = CLUBS.map(k => `<article class="club" style="--c:${k.c}" ${cat !== "all" && !k.cat.split(" ").includes(cat) ? "hidden" : ""}><div class="hd"><span class="ico">${ICON[k.icon]}</span><h3>${esc(k.name[lang])}</h3></div><p>${esc(k.text[lang])}</p>${teacherLine(k.teacher)}<div class="when">${k.days.length ? `<span class="chip">${esc(dayRange(k.days))}</span>` : ""}${k.time ? `<span class="chip">${esc(k.time)}</span>` : ""}${k.appt ? `<span class="chip">${esc(t.appt)}</span>` : ""}</div><div class="ft">${priceHtml(k.price, k.unit)}<a class="ask" data-tg data-what="${esc(k.name[lang])}" href="${TG}" target="_blank" rel="noopener">${esc(t.ask)}</a></div></article>`).join("");
+  $("clubList").innerHTML = CLUBS.map(k => `<article class="club${k.c === C.sun ? " on-sun" : ""}" style="--c:${k.c}" ${cat !== "all" && !k.cat.split(" ").includes(cat) ? "hidden" : ""}><div class="hd"><span class="ico">${ICON[k.icon]}</span><h3>${esc(k.name[lang])}</h3></div><p>${esc(k.text[lang])}</p>${teacherLine(k.teacher)}<div class="when">${k.days.length ? `<span class="chip">${esc(dayRange(k.days))}</span>` : ""}${k.time ? `<span class="chip">${esc(k.time)}</span>` : ""}${k.appt ? `<span class="chip">${esc(t.appt)}</span>` : ""}</div><div class="ft">${priceHtml(k.price, k.unit)}<a class="ask" data-tg data-what="${esc(k.name[lang])}" href="${TG}" target="_blank" rel="noopener">${esc(t.ask)}</a></div></article>`).join("");
 }
 function renderWeek() {
   const t = T[lang], COLORS = [C.pink, C.green, C.blue, C.red, C.navy, C.sun];
-  $("dayTabs").innerHTML = SHORT[lang].map((n, i) => `<button type="button" role="tab" data-day="${i + 1}" style="--c:${COLORS[i]}" aria-pressed="${day === i + 1}">${esc(n)}</button>`).join("");
+  $("dayTabs").innerHTML = SHORT[lang].map((n, i) => `<button type="button" role="tab" data-day="${i + 1}" class="${COLORS[i] === C.sun ? "on-sun" : ""}" style="--c:${COLORS[i]}" aria-pressed="${day === i + 1}">${esc(n)}</button>`).join("");
   $("week").innerHTML = DAYS[lang].map((name, i) => {
     const d = i + 1, items = [];
     if (d <= 5) items.push(["10:00–16:00", t.gardenShort]);
     [...CLUBS, ...SPECS].filter(k => (k.days || []).includes(d) && !k.appt).forEach(k => items.push([k.time, k.name[lang]]));
     items.sort((a, b) => a[0].localeCompare(b[0]));
-    return `<div class="day ${d === day ? "on" : ""}" style="--c:${COLORS[i]}"><h3>${esc(name)}</h3><ul>${items.map(([tm, n]) => `<li><b>${esc(tm)}</b><span>${esc(n)}</span></li>`).join("")}</ul></div>`;
+    return `<div class="day ${d === day ? "on" : ""} ${COLORS[i] === C.sun ? "on-sun" : ""}" style="--c:${COLORS[i]}"><h3>${esc(name)}</h3><ul>${items.map(([tm, n]) => `<li><b>${esc(tm)}</b><span>${esc(n)}</span></li>`).join("")}</ul></div>`;
   }).join("");
 }
 function render(next) {
@@ -684,7 +688,7 @@ function render(next) {
   $("gardenList").innerHTML = t.gardenList.map(x => `<li>${ICON.check}<span>${esc(x)}</span></li>`).join("");
   $("slots").innerHTML = GARDEN_SLOTS.map(s => `<div class="slot"><span class="time">${s.time}</span><div><b>${esc(s.label[lang])}</b><small>${esc(dayRange([1,2,3,4,5]))}</small></div>${priceHtml(s.price, "m")}</div>`).join("") + `<div class="note">${ICON.info}<span>${esc(t.gardenNote)}</span></div>`;
   renderClubs();
-  $("specList").innerHTML = SPECS.map(s => `<article class="spec" style="background:${s.c}"><span class="tag">${esc(s.mc ? "Telegram" : t.appt)}</span><h3>${esc(s.name[lang])}</h3><p>${esc(s.text[lang])}</p>${teacherLine(s.teacher, true)}${s.days ? `<span class="tag">${esc(dayRange(s.days))} · ${esc(s.time)}</span>` : ""}${priceHtml(s.price, s.unit)}<a class="btn b-white" data-tg data-what="${esc(s.name[lang])}" href="${TG}" target="_blank" rel="noopener">${esc(s.mc ? t.mcBtn : t.specBtn)}</a></article>`).join("");
+  $("specList").innerHTML = SPECS.map(s => `<article class="spec${s.c === C.sun ? " on-sun" : ""}" style="background:${s.c}"><span class="tag">${esc(s.mc ? "Telegram" : t.appt)}</span><h3>${esc(s.name[lang])}</h3><p>${esc(s.text[lang])}</p>${teacherLine(s.teacher, true)}${s.days ? `<span class="tag">${esc(dayRange(s.days))} · ${esc(s.time)}</span>` : ""}${priceHtml(s.price, s.unit)}<a class="btn b-white" data-tg data-what="${esc(s.name[lang])}" href="${TG}" target="_blank" rel="noopener">${esc(s.mc ? t.mcBtn : t.specBtn)}</a></article>`).join("");
   $("steps").innerHTML = t.steps.map(([b, s], i) => `<li style="--c:${[C.pink, C.green, C.blue][i]}"><b>${esc(b)}</b><span>${esc(s)}</span></li>`).join("");
   $("photos").hidden = !PHOTOS.length; $("gallery").innerHTML = PHOTOS.map(src => `<img src="${esc(src)}" alt="" loading="lazy">`).join("");
   $("team").hidden = !TEAM.length; $("teamList").innerHTML = TEAM.map(p => `<div class="person" style="--c:${p.c}">${p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name[lang])}" loading="lazy">` : `<span class="ava" style="--c:${p.c}">${esc(p.name[lang].slice(0, 1))}</span>`}<b>${esc(p.name[lang])}</b>${p.exp ? `<span class="exp">${esc(T[lang].exp(p.exp))}</span>` : ""}<small>${esc(p.role[lang])}</small></div>`).join("");
