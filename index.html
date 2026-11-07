@@ -70,8 +70,9 @@
   .lang button[aria-pressed="true"]{background:var(--navy);color:#fff}
   .burger{display:none;width:44px;height:44px;border:0;border-radius:14px;background:#fff;color:var(--navy);cursor:pointer;place-items:center}
   .burger svg{width:24px;height:24px}
-  @media(max-width:1020px){.nav,.top .lang{display:none}.burger{display:grid}.tel-top{margin-left:auto}}
-  @media(max-width:400px){.brand img{height:34px}.tel-top{padding:7px 10px;font-size:13px}}
+  @media(max-width:1020px){.nav{display:none}.burger{display:grid;order:4}.top .lang{margin-left:auto;order:2}.tel-top{order:3}}
+  @media(max-width:640px){.tel-top span{display:none}.tel-top{width:44px;height:44px;padding:0;justify-content:center;border-radius:14px}.tel-top svg{width:20px;height:20px}.top .lang button{padding:7px 8px}}
+  @media(max-width:400px){.brand img{height:32px}.top .wrap{gap:7px}.top .lang button{padding:7px 6px;font-size:12px}}
 
   /* mobile menu */
   .drawer{position:fixed;inset:0;z-index:60;display:none}
@@ -265,7 +266,7 @@
   <div class="wrap">
     <a class="brand" href="#home" aria-label="ღიმილი"><img src="./site/assets/logo.webp" alt="ღიმილი" width="96" height="42"></a>
     <nav class="nav" aria-label="menu" id="nav"></nav>
-    <a class="tel-top" href="tel:+995557256038"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>557 256 038</a>
+    <a class="tel-top" href="tel:+995557256038" aria-label="557 256 038"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg><span>557 256 038</span></a>
     <div class="lang" role="group" aria-label="Language"></div>
     <button class="burger" type="button" aria-label="menu" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
