@@ -1,0 +1,13 @@
+# Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia
+# Runs the CRM checks on every push: a red ✗ next to the commit on GitHub means something broke.
+name: CRM tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install playwright==1.48.0 && python -m playwright install --with-deps chromium
+      - run: python3 tests/crm_test.py
