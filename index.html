@@ -195,6 +195,7 @@
   .person{background:#fff;border-radius:22px;padding:14px;text-align:center}
   .person img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:16px;margin-bottom:10px}
   .person b{display:block;line-height:1.25}.person small{color:var(--muted);font-weight:700;font-size:14px;line-height:1.3;display:block;margin-top:4px}
+  .exp{display:inline-block;margin-top:6px;background:color-mix(in srgb,var(--c,#1a8fe0) 14%,#fff);color:var(--navy);font-weight:900;font-size:13px;padding:4px 10px;border-radius:999px}
   .ava{width:72px;height:72px;border-radius:24px;background:var(--c);color:#fff;font-weight:900;font-size:32px;display:grid;place-items:center;margin:4px auto 10px}
   .who{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--navy)}
   .who svg{width:16px;height:16px}.who.light{color:#fff}
@@ -427,13 +428,13 @@ const SHOW_PRICES = true;             // prices from the CRM (set false to hide)
 const PHOTOS = [];                    // e.g. ["./site/photos/room-1.webp", …] — the photo section appears when filled
 // Teachers from the CRM. Add photo:"./site/photos/<name>.webp" when photos arrive.
 const TEAM = [
-  { id:"bela", c:"#e8178a", name:{ka:"ბელა კომლაძე",ru:"Бела Комладзе",en:"Bela Komladze"}, role:{ka:"მინი-ბაღი · სკოლისთვის მომზადება",ru:"Мини-садик · подготовка к школе",en:"Mini garden · school prep"} },
-  { id:"inga", c:"#22a83a", name:{ka:"ინგა მინასიანი",ru:"Инга Минасиани",en:"Inga Minasiani"}, role:{ka:"მინი-ბაღი · განვითარება · რუსული სექტორი",ru:"Мини-садик · развитие · русский сектор",en:"Mini garden · development · Russian sector"} },
-  { id:"nata", c:"#f5b400", name:{ka:"ნატა ნოზაძე",ru:"Ната Нозадзе",en:"Nata Nozadze"}, role:{ka:"მინი-ბაღი",ru:"Мини-садик",en:"Mini garden"} },
-  { id:"lia", c:"#1a8fe0", name:{ka:"ლია ზაქარაია",ru:"Лия Закарая",en:"Lia Zakaraia"}, role:{ka:"კრაფტი · ინგლისური კლუბი",ru:"Крафт · английский клуб",en:"Craft · English club"} },
-  { id:"inna", c:"#1b3cae", name:{ka:"ინნა ხუდადიანი",ru:"Инна Худадиани",en:"Inna Khudadiani"}, role:{ka:"ინგლისური ენა",ru:"Английский язык",en:"English"} },
-  { id:"olga", c:"#e5261f", name:{ka:"ოლგა ლაპიცკაია",ru:"Ольга Лапицкая",en:"Olga Lapitskaia"}, role:{ka:"მენტალური არითმეტიკა",ru:"Ментальная арифметика",en:"Mental arithmetic"} },
-  { id:"eka", c:"#e8178a", name:{ka:"ეკატერინე ქასრაძე",ru:"Екатерине Касрадзе",en:"Ekaterine Kasradze"}, role:{ka:"ლოგოპედი · ტომატისი",ru:"Логопед · Томатис",en:"Speech therapist · Tomatis"} },
+  { id:"bela", c:"#e8178a", name:{ka:"ბელა",ru:"Белла",en:"Bella"}, exp:9, role:{ka:"მინი-ბაღი · სკოლისთვის მომზადება",ru:"Мини-садик · подготовка к школе",en:"Mini garden · school prep"} },
+  { id:"inga", c:"#22a83a", name:{ka:"ინგა",ru:"Инга",en:"Inga"}, exp:9, role:{ka:"მინი-ბაღი · განვითარება · რუსული სექტორი",ru:"Мини-садик · развитие · русский сектор",en:"Mini garden · development · Russian sector"} },
+  { id:"nata", c:"#f5b400", name:{ka:"ნატა",ru:"Ната",en:"Nata"}, exp:3, role:{ka:"მინი-ბაღი",ru:"Мини-садик",en:"Mini garden"} },
+  { id:"lia", c:"#1a8fe0", name:{ka:"ლია",ru:"Лия",en:"Lia"}, exp:5, role:{ka:"კრაფტი · ინგლისური კლუბი",ru:"Крафт · английский клуб",en:"Craft · English club"} },
+  { id:"inna", c:"#1b3cae", name:{ka:"ინნა",ru:"Инна",en:"Inna"}, exp:5, role:{ka:"ინგლისური ენა",ru:"Английский язык",en:"English"} },
+  { id:"olga", c:"#e5261f", name:{ka:"ოლგა",ru:"Ольга",en:"Olga"}, exp:3, role:{ka:"მენტალური არითმეტიკა",ru:"Ментальная арифметика",en:"Mental arithmetic"} },
+  { id:"eka", c:"#e8178a", name:{ka:"ეკატერინე",ru:"Екатерине",en:"Ekaterine"}, exp:9, role:{ka:"ლოგოპედი · ტომატისი",ru:"Логопед · Томатис",en:"Speech therapist · Tomatis"} },
 ];
 const REVIEWS = [];                   // e.g. [{text:{ka:"…",ru:"…",en:"…"}, who:"ანას დედა"}] — real parents' words only
 // ───────────────────────────────────────────────────────────────────────
@@ -517,9 +518,9 @@ const T = {
     gardenNote:"აირჩიეთ ნახევარი ან სრული დღე — თავისუფალ ადგილებს WhatsApp-ში ან Telegram-ში გეტყვით.",
     clubsTitle:"წრეები", clubsLead:"აირჩიეთ ბავშვის ინტერესის მიხედვით. დაგვიწერეთ — გეტყვით თავისუფალ ადგილებს და ჩაგწერთ საცდელზე.",
     cats:[["all","ყველა"],["art","შემოქმედება"],["lang","ენები"],["school","სკოლისთვის"],["dev","განვითარება"],["solo","ინდივიდუალური"]],
-    ask:"ჩაწერა →", appt:"წინასწარი ჩაწერით", from:"", perM:"₾ / თვე", perL:"₾ / გაკვ.", perC:"₾ / კურსი",
+    ask:"ჩაწერა →", appt:"წინასწარი ჩაწერით", from:"", perM:"₾ / თვე", perL:"₾ / გაკვ.", perC:"₾ / კურსი", exp:n => `${n}+ წლის გამოცდილება`,
     specTitle:"სპეციალისტები", specLead:"ინდივიდუალური მუშაობა წინასწარი ჩაწერით.", specBtn:"ჩაწერა", mcBtn:"თარიღების გაგება",
-    photosTitle:"როგორ გამოიყურება ღიმილი", teamTitle:"ჩვენი პედაგოგები", teamLead:"გამოცდილი და მზრუნველი გუნდი.", reviewsTitle:"მშობლების შეფასებები",
+    photosTitle:"როგორ გამოიყურება ღიმილი", teamTitle:"ჩვენი პედაგოგები", teamLead:"გამოცდილი და მზრუნველი გუნდი — 3-დან 9 წლამდე და მეტი გამოცდილებით.", reviewsTitle:"მშობლების შეფასებები",
     stepsTitle:"როგორ დავიწყოთ", steps:[["დაგვიწერეთ ან დაგვირეკეთ","გვითხარით ბავშვის ასაკი და რა აინტერესებს."],["მოდით საცდელ გაკვეთილზე","გაიცანით ცენტრი, პედაგოგი და ჯგუფი."],["აირჩიეთ განრიგი","შეარჩიეთ მოსახერხებელი დღეები და დრო."]],
     schedTitle:"კვირის განრიგი", schedLead:"მინი-ბაღი ორშაბათიდან პარასკევამდე, 10:00-დან. ინდივიდუალური გაკვეთილები შეთანხმებით.", gardenShort:"მინი-ბაღი",
     faqTitle:"ხშირი კითხვები",
@@ -545,9 +546,9 @@ const T = {
     gardenNote:"Выберите полдня или полный день — о свободных местах подскажем в WhatsApp или Telegram.",
     clubsTitle:"Кружки", clubsLead:"Выберите по интересам ребёнка. Напишите нам — подскажем свободные места и запишем на пробное.",
     cats:[["all","Все"],["art","Творчество"],["lang","Языки"],["school","К школе"],["dev","Развитие"],["solo","Индивидуально"]],
-    ask:"Записаться →", appt:"По записи", from:"от", perM:"₾ / мес", perL:"₾ / занятие", perC:"₾ / курс",
+    ask:"Записаться →", appt:"По записи", from:"от", perM:"₾ / мес", perL:"₾ / занятие", perC:"₾ / курс", exp:n => `опыт более ${n} лет`,
     specTitle:"Специалисты", specLead:"Индивидуальная работа по предварительной записи.", specBtn:"Записаться", mcBtn:"Узнать даты",
-    photosTitle:"Как выглядит ღიმილი", teamTitle:"Наши педагоги", teamLead:"Опытная и заботливая команда.", reviewsTitle:"Отзывы родителей",
+    photosTitle:"Как выглядит ღიმილი", teamTitle:"Наши педагоги", teamLead:"Опытная и заботливая команда — от 3 до 9+ лет опыта.", reviewsTitle:"Отзывы родителей",
     stepsTitle:"Как начать", steps:[["Напишите или позвоните","Расскажите возраст ребёнка и что ему интересно."],["Приходите на пробное занятие","Познакомьтесь с центром, педагогом и группой."],["Выберите расписание","Подберём удобные дни и время."]],
     schedTitle:"Расписание на неделю", schedLead:"Мини-садик с понедельника по пятницу с 10:00. Индивидуальные занятия по договорённости.", gardenShort:"Мини-садик",
     faqTitle:"Частые вопросы",
@@ -573,9 +574,9 @@ const T = {
     gardenNote:"Choose a half or full day — we'll tell you about free places on WhatsApp or Telegram.",
     clubsTitle:"Clubs", clubsLead:"Choose by your child's interests. Message us — we'll share free places and book a trial.",
     cats:[["all","All"],["art","Creative"],["lang","Languages"],["school","School prep"],["dev","Development"],["solo","One to one"]],
-    ask:"Book →", appt:"By appointment", from:"from", perM:"₾ / month", perL:"₾ / lesson", perC:"₾ / course",
+    ask:"Book →", appt:"By appointment", from:"from", perM:"₾ / month", perL:"₾ / lesson", perC:"₾ / course", exp:n => `${n}+ years of experience`,
     specTitle:"Specialists", specLead:"Individual sessions by appointment.", specBtn:"Book", mcBtn:"Ask for dates",
-    photosTitle:"Inside ღიმილი", teamTitle:"Our teachers", teamLead:"An experienced, caring team.", reviewsTitle:"What parents say",
+    photosTitle:"Inside ღიმილი", teamTitle:"Our teachers", teamLead:"An experienced, caring team — from 3 to 9+ years of experience.", reviewsTitle:"What parents say",
     stepsTitle:"How to start", steps:[["Message or call us","Tell us your child's age and interests."],["Come to a trial lesson","Meet the centre, the teacher and the group."],["Pick a schedule","Choose the days and times that suit you."]],
     schedTitle:"Weekly schedule", schedLead:"The mini garden is open Monday to Friday from 10:00. Private lessons by arrangement.", gardenShort:"Mini garden",
     faqTitle:"Questions parents ask",
@@ -627,7 +628,7 @@ function render(next) {
   $("specList").innerHTML = SPECS.map(s => `<article class="spec" style="background:${s.c}"><span class="tag">${esc(s.mc ? "Telegram" : t.appt)}</span><h3>${esc(s.name[lang])}</h3><p>${esc(s.text[lang])}</p>${teacherLine(s.teacher, true)}${priceHtml(s.price, s.unit)}<a class="btn b-white" data-tg data-what="${esc(s.name[lang])}" href="${TG}" target="_blank" rel="noopener">${esc(s.mc ? t.mcBtn : t.specBtn)}</a></article>`).join("");
   $("steps").innerHTML = t.steps.map(([b, s], i) => `<li style="--c:${[C.pink, C.green, C.blue][i]}"><b>${esc(b)}</b><span>${esc(s)}</span></li>`).join("");
   $("photos").hidden = !PHOTOS.length; $("gallery").innerHTML = PHOTOS.map(src => `<img src="${esc(src)}" alt="" loading="lazy">`).join("");
-  $("team").hidden = !TEAM.length; $("teamList").innerHTML = TEAM.map(p => `<div class="person">${p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name[lang])}" loading="lazy">` : `<span class="ava" style="--c:${p.c}">${esc(p.name[lang].slice(0, 1))}</span>`}<b>${esc(p.name[lang])}</b><small>${esc(p.role[lang])}</small></div>`).join("");
+  $("team").hidden = !TEAM.length; $("teamList").innerHTML = TEAM.map(p => `<div class="person" style="--c:${p.c}">${p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name[lang])}" loading="lazy">` : `<span class="ava" style="--c:${p.c}">${esc(p.name[lang].slice(0, 1))}</span>`}<b>${esc(p.name[lang])}</b>${p.exp ? `<span class="exp">${esc(T[lang].exp(p.exp))}</span>` : ""}<small>${esc(p.role[lang])}</small></div>`).join("");
   $("reviews").hidden = !REVIEWS.length; $("reviewList").innerHTML = REVIEWS.map(r => `<figure class="review"><blockquote>“${esc(r.text[lang] || r.text.ka)}”</blockquote><figcaption>${esc(r.who)}</figcaption></figure>`).join("");
   renderWeek();
   $("faqList").innerHTML = t.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
