@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#8ec8ef">
 <title>ღიმილი · ბავშვთა განვითარების ცენტრი ისანში · Gimili</title>
-<meta name="description" content="ღიმილი — ბავშვთა განვითარების ცენტრი ისანში: მინი-ბაღი, წრეები, სკოლისთვის მომზადება (ქართული და რუსული სექტორი), ინგლისური, ლოგოპედი, ტომატისი. ჩაეწერეთ საცდელ გაკვეთილზე.">
+<meta name="description" content="ღიმილი — ბავშვთა განვითარების ცენტრი ისანში: მინი-ბაღი, წრეები, სკოლისთვის მომზადება (ქართული და რუსული სექტორი), ინგლისური, მეტყველების თერაპევტი, ტომატისი. ჩაეწერეთ საცდელ გაკვეთილზე.">
 <meta name="author" content="Irakli Kvirkvelia · Homes in Georgia">
 <!-- Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia -->
 <link rel="canonical" href="https://gimili.ge/">
@@ -442,7 +442,7 @@ const TEAM = [
   { id:"lia", c:"#1a8fe0", name:{ka:"ლია",ru:"Лия",en:"Lia"}, exp:5, role:{ka:"სენსორული თერაპევტი · არტ-თერაპევტი · კრაფტი · ინგლისური კლუბი",ru:"Сенсорный терапевт · арт-терапевт · крафт · английский клуб",en:"Sensory therapist · art therapist · craft · English club"} },
   { id:"inna", c:"#1b3cae", name:{ka:"ინნა",ru:"Инна",en:"Inna"}, exp:5, role:{ka:"ინგლისური ენა",ru:"Английский язык",en:"English"} },
   { id:"olga", c:"#e5261f", name:{ka:"ოლგა",ru:"Ольга",en:"Olga"}, exp:3, role:{ka:"მენტალური არითმეტიკა",ru:"Ментальная арифметика",en:"Mental arithmetic"} },
-  { id:"eka", c:"#e8178a", name:{ka:"ეკატერინე",ru:"Екатерине",en:"Ekaterine"}, exp:9, role:{ka:"ლოგოპედი · ტომატისი",ru:"Логопед · Томатис",en:"Speech therapist · Tomatis"} },
+  { id:"eka", c:"#e8178a", name:{ka:"ეკატერინე",ru:"Екатерине",en:"Ekaterine"}, exp:9, role:{ka:"მეტყველების თერაპევტი · ტომატისი",ru:"Логопед · Томатис",en:"Speech therapist · Tomatis"} },
 ];
 // Real reviews from the centre's Google card (4.7 ★, 15 reviews). Names shortened to first name + initial.
 const GOOGLE_RATING = { stars: 4.7, count: 15, url: "https://share.google/TMoj7TUxmyv3cVjR8" };
@@ -457,7 +457,7 @@ const REVIEWS = [
           en:"The kindest and most interesting garden: every day the kids have fun and learn something. English, drama, crafts, dance, bilingual teachers. We love it!"} },
   { who:"Nina N.",
     text:{ru:"Самый надёжный, творческий, доброжелательный и внимательный персонал. Я водила туда обоих детей, и они до сих пор с теплотой вспоминают воспитательниц Беллу и Диану. Мой спаситель — логопед Эка. Лучший детский сад!",
-          ka:"ყველაზე საიმედო, შემოქმედებითი, კეთილგანწყობილი და ყურადღებიანი პერსონალი. ორივე შვილი იქ დავატარე და დღემდე სითბოთი იხსენებენ აღმზრდელებს — ბელას და დიანას. ჩემი მხსნელი — ლოგოპედი ეკა. საუკეთესო ბაღი!",
+          ka:"ყველაზე საიმედო, შემოქმედებითი, კეთილგანწყობილი და ყურადღებიანი პერსონალი. ორივე შვილი იქ დავატარე და დღემდე სითბოთი იხსენებენ აღმზრდელებს — ბელას და დიანას. ჩემი მხსნელი — მეტყველების თერაპევტი ეკა. საუკეთესო ბაღი!",
           en:"The most reliable, creative, kind and attentive staff. I took both my children there and they still remember their teachers Bella and Diana fondly. Eka, the speech therapist, was my lifesaver. The best kindergarten!"} },
   { who:"Nadezhda S.",
     text:{ru:"Огромная благодарность всем воспитателям и наставникам. Ребёнок с радостью идёт в садик и выходит в отличном настроении, с новыми умениями и поделками. И грузинский, и английский даются легко — обучение в игровой форме. От души рекомендую!",
@@ -552,7 +552,7 @@ const GARDEN_SLOTS = [
   { time:"10:00–16:00", price:450, label:{ka:"სრული დღე",ru:"Полный день",en:"Full day"} }
 ];
 const SPECS = [
-  { c:C.blue, price:40, unit:"l", teacher:"eka", days:[1,2,3,4,5], time:"09:00–18:00", name:{ka:"ლოგოპედი",ru:"Логопед",en:"Speech therapist"},
+  { c:C.blue, price:40, unit:"l", teacher:"eka", days:[1,2,3,4,5], time:"09:00–18:00", name:{ka:"მეტყველების თერაპევტი",ru:"Логопед",en:"Speech therapist"},
     text:{ka:"მეტყველების განვითარება: გაკვეთილები, კონსულტაცია და ქცევაზე მუშაობა.",ru:"Развитие речи: занятия, консультации и работа с поведением.",en:"Speech development: lessons, consultations and behaviour support."} },
   { c:C.pink, price:1000, unit:"c", teacher:"eka", name:{ka:"ტომატისი",ru:"Томатис",en:"Tomatis"},
     text:{ka:"ტომატისის მეთოდი: სმენითი სტიმულაციის კურსი.",ru:"Метод Томатис: курс слуховой стимуляции.",en:"The Tomatis method: an auditory stimulation course."} },
@@ -566,7 +566,7 @@ const T = {
     heroLead:"მინი-ბაღი, წრეები, სკოლისთვის მომზადება, ინგლისური და სპეციალისტები — ერთ თბილ და ფერად სივრცეში, სახლთან ახლოს.",
     chooseTitle:"სად მოგწეროთ?", close:"დახურვა", waHello:"გამარჯობა! მინდა ჩაწერა საცდელ გაკვეთილზე", ctaTrial:"ჩაწერა საცდელ გაკვეთილზე", ctaTrialShort:"ჩაწერა", call:"დარეკვა",
     trust:["პატარა ჯგუფები","ორშ–შაბ","ქართული და რუსული სექტორი","ინდივიდუალური გაკვეთილები"],
-    tiles:[["garden","house",C.pink,"მინი-ბაღი","ორშ–პარ, 10:00-დან"],["clubs","star",C.green,"წრეები","11 მიმართულება"],["clubs:school","book",C.red,"სკოლისთვის მომზადება","ქართული და რუსული სექტორი"],["specialists","ear",C.blue,"სპეციალისტები","ლოგოპედი, ტომატისი"]],
+    tiles:[["garden","house",C.pink,"მინი-ბაღი","ორშ–პარ, 10:00-დან"],["clubs","star",C.green,"წრეები","11 მიმართულება"],["clubs:school","book",C.red,"სკოლისთვის მომზადება","ქართული და რუსული სექტორი"],["specialists","ear",C.blue,"სპეციალისტები","მეტყველების თერაპევტი, ტომატისი"]],
     more:"ვრცლად →",
     gardenTitle:"მინი-ბაღი", gardenLead:"ორშაბათიდან პარასკევამდე, პატარა ჯგუფებში — ბავშვი თამაშობს, სწავლობს და მეგობრობს.", gardenCardTitle:"დღე, რომელიც ბავშვს უყვარს",
     gardenList:["თამაში, შემოქმედება და მეგობრები","ბაღის ინგლისური სამშაბათს და ხუთშაბათს","კრაფტი ხუთშაბათობით","სკოლისთვის მომზადება თამაშით"],
