@@ -201,10 +201,16 @@
   .who svg{width:16px;height:16px}.who.light{color:#fff}
   @media(max-width:480px){.team{grid-template-columns:repeat(2,minmax(0,1fr))}.person{padding:12px 10px}}
   .reviews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-  .review{background:#fff;border-radius:22px;padding:20px;margin:0}
+  .review{background:#fff;border-radius:22px;padding:20px;margin:0;box-shadow:0 8px 20px rgba(26,80,140,.07);display:flex;flex-direction:column}
+  .review[hidden]{display:none}
+  .review figcaption{margin-top:auto}
+  .stars{color:#f5b400;letter-spacing:2px;font-size:16px}
+  .review .stars{margin-bottom:8px}
+  .gbadge{display:flex;align-items:center;gap:8px;margin-top:10px;font-weight:800;color:var(--ink)}
+  .gbadge b{font-size:28px;color:var(--navy)}.gbadge small{color:var(--muted);font-size:14px}
   .review blockquote{margin:0 0 10px;font-weight:700}
   .review figcaption{color:var(--muted);font-weight:800;font-size:14px}
-  @media(max-width:820px){.reviews{grid-template-columns:minmax(0,1fr)}}
+  @media(max-width:980px){.reviews{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.reviews{grid-template-columns:minmax(0,1fr)}}
 
   /* schedule */
   .days{display:none;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px}
@@ -353,15 +359,17 @@
       <div class="team" id="teamList"></div>
     </section>
 
+    <section id="reviews" class="reveal" hidden>
+      <div class="sec-head"><div><h2 data-t="reviewsTitle"></h2><div class="gbadge" id="gbadge"></div></div><a class="btn b-white" id="gLink" href="#" target="_blank" rel="noopener"><span data-t="allReviews"></span></a></div>
+      <div class="reviews" id="reviewList"></div>
+      <div style="text-align:center;margin-top:16px"><button type="button" class="btn b-white" id="moreReviews"><span data-t="moreReviews"></span></button></div>
+    </section>
+
     <section id="start" class="reveal">
       <div class="sec-head"><div><h2 data-t="stepsTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#e8178a" stroke-width="4" stroke-linecap="round"/></svg></div><a class="btn b-sun" data-tg href="https://t.me/centre_gimili" target="_blank" rel="noopener"><span data-t="ctaTrial"></span></a></div>
       <ol class="steps" id="steps"></ol>
     </section>
 
-    <section id="reviews" class="reveal" hidden>
-      <div class="sec-head"><div><h2 data-t="reviewsTitle"></h2></div></div>
-      <div class="reviews" id="reviewList"></div>
-    </section>
 
     <section id="schedule" class="reveal">
       <div class="sec-head"><div><h2 data-t="schedTitle"></h2><svg class="squiggle" viewBox="0 0 120 14" aria-hidden="true"><path d="M2 8c10-8 20 8 30 0s20 8 30 0 20 8 30 0 20 8 26 0" fill="none" stroke="#ffd21f" stroke-width="4" stroke-linecap="round"/></svg><p data-t="schedLead"></p></div></div>
@@ -436,7 +444,54 @@ const TEAM = [
   { id:"olga", c:"#e5261f", name:{ka:"ოლგა",ru:"Ольга",en:"Olga"}, exp:3, role:{ka:"მენტალური არითმეტიკა",ru:"Ментальная арифметика",en:"Mental arithmetic"} },
   { id:"eka", c:"#e8178a", name:{ka:"ეკატერინე",ru:"Екатерине",en:"Ekaterine"}, exp:9, role:{ka:"ლოგოპედი · ტომატისი",ru:"Логопед · Томатис",en:"Speech therapist · Tomatis"} },
 ];
-const REVIEWS = [];                   // e.g. [{text:{ka:"…",ru:"…",en:"…"}, who:"ანას დედა"}] — real parents' words only
+// Real reviews from the centre's Google card (4.7 ★, 15 reviews). Names shortened to first name + initial.
+const GOOGLE_RATING = { stars: 4.7, count: 15, url: "https://share.google/TMoj7TUxmyv3cVjR8" };
+const REVIEWS = [
+  { who:"Anastasia A.",
+    text:{ru:"Дочка ходит с большим удовольствием. Удобно, что можно мягко адаптировать ребёнка к садику и оставлять на комфортное время. У воспитателей трепетное и тёплое отношение к детям. Дочка обожает английский в садике — даже на дополнительные занятия записалась.",
+          ka:"ქალიშვილი დიდი სიამოვნებით დადის. მოსახერხებელია, რომ ბავშვს ბაღს რბილად აჩვევ და კომფორტული დროით ტოვებ. აღმზრდელებს ბავშვებისადმი თბილი და ზრუნვით სავსე დამოკიდებულება აქვთ. ქალიშვილს ძალიან უყვარს ბაღის ინგლისური — დამატებით გაკვეთილებზეც ჩაეწერა.",
+          en:"My daughter loves going. It's great that you can ease your child into the garden gently and leave them for as long as suits you. The teachers are warm and caring. She adores the garden English — she even signed up for extra lessons."} },
+  { who:"Venera K.",
+    text:{ru:"Самый добрый и интересный садик: каждый день дети веселятся и чему-то учатся. Есть английский, театральный кружок, творчество, танцы, воспитатели-билингвы. Обожаем!",
+          ka:"ყველაზე კეთილი და საინტერესო ბაღი: ბავშვები ყოველდღე ხალისობენ და რაღაცას სწავლობენ. არის ინგლისური, თეატრალური წრე, შემოქმედება, ცეკვა, ორენოვანი აღმზრდელები. გვიყვარს!",
+          en:"The kindest and most interesting garden: every day the kids have fun and learn something. English, drama, crafts, dance, bilingual teachers. We love it!"} },
+  { who:"Nina N.",
+    text:{ru:"Самый надёжный, творческий, доброжелательный и внимательный персонал. Я водила туда обоих детей, и они до сих пор с теплотой вспоминают воспитательниц Беллу и Диану. Мой спаситель — логопед Эка. Лучший детский сад!",
+          ka:"ყველაზე საიმედო, შემოქმედებითი, კეთილგანწყობილი და ყურადღებიანი პერსონალი. ორივე შვილი იქ დავატარე და დღემდე სითბოთი იხსენებენ აღმზრდელებს — ბელას და დიანას. ჩემი მხსნელი — ლოგოპედი ეკა. საუკეთესო ბაღი!",
+          en:"The most reliable, creative, kind and attentive staff. I took both my children there and they still remember their teachers Bella and Diana fondly. Eka, the speech therapist, was my lifesaver. The best kindergarten!"} },
+  { who:"Nadezhda S.",
+    text:{ru:"Огромная благодарность всем воспитателям и наставникам. Ребёнок с радостью идёт в садик и выходит в отличном настроении, с новыми умениями и поделками. И грузинский, и английский даются легко — обучение в игровой форме. От души рекомендую!",
+          ka:"დიდი მადლობა ყველა აღმზრდელს და მენტორს. ბავშვი სიხარულით მიდის ბაღში და ყოველთვის კარგ ხასიათზე გამოდის, ახალი უნარებით და ნახელავით. ქართულიც და ინგლისურიც ადვილად ეძლევა — სწავლება თამაშით მიმდინარეობს. გულით გირჩევთ!",
+          en:"Huge thanks to all the teachers. My child is happy to go and always comes out in a great mood, with new skills and crafts. Both Georgian and English come easily — learning through play. Highly recommend!"} },
+  { who:"Anastasia K.",
+    text:{ru:"Большое спасибо за субботний лагерь! Спасение для работающих по субботам мам — малыш занят и развивается.",
+          ka:"დიდი მადლობა შაბათის ბანაკისთვის! შაბათობით მომუშავე დედებისთვის ხსნაა — პატარა დაკავებულია და ვითარდება.",
+          en:"Thank you so much for the Saturday camp! A lifesaver for mums who work on Saturdays — the little one is busy and learning."} },
+  { who:"Anna Z.",
+    text:{ru:"Бесконечно благодарны воспитателям за атмосферу, заботу и современный подход! Ребёнок второй год бежит в садик счастливый.",
+          ka:"უსაზღვროდ მადლიერები ვართ აღმზრდელების ატმოსფეროსთვის, ზრუნვისა და თანამედროვე მიდგომისთვის! ბავშვი უკვე მეორე წელია ბედნიერი მირბის ბაღში.",
+          en:"Endlessly grateful to the teachers for the atmosphere, care and modern approach! Our child has been running to the garden happily for the second year."} },
+  { who:"Evgenia P.",
+    text:{ru:"Прекрасный садик. Ребёнок действительно получает знания: за неделю выучил стих и песню на грузинском, считает на грузинском. Прекрасные педагоги и атмосфера, дети дружные, каждому уделяют внимание. Спасибо!",
+          ka:"მშვენიერი ბაღი. ბავშვი ნამდვილად იღებს ცოდნას: ერთ კვირაში ისწავლა ლექსი და სიმღერა ქართულად, ითვლის ქართულად. მშვენიერი პედაგოგები და ატმოსფერო, ბავშვები მეგობრულები არიან, ყველას ყურადღებას აქცევენ. მადლობა!",
+          en:"A wonderful kindergarten. My child really learns: in a week he learned a poem and a song in Georgian and counts in Georgian. Great teachers and atmosphere, friendly kids, attention for everyone. Thank you!"} },
+  { who:"Anuki A.",
+    text:{ka:"საოცარი გარემოა ბავშვებისთვის. ძალიან კმაყოფილი ვარ და მადლობას ვუხდი ყველა აღმზრდელს — ბევრი შრომა ჩადეს ჩემი შვილის განვითარებაში. წარმატებები ღიმილის მთელ გუნდს!",
+          ru:"Потрясающая среда для детей. Я очень довольна и благодарю всех воспитателей — они вложили много сил в развитие моего ребёнка. Удачи всему коллективу «Гимили»!",
+          en:"An amazing environment for children. I'm very happy and grateful to all the teachers — they put a lot of effort into my child's development. Good luck to the whole Gimili team!"} },
+  { who:"Anna A.",
+    text:{ka:"ყველაზე თბილი და მეგობრული ატმოსფერო, ყველაზე მოსიყვარულე ადამიანები. ჩვენი ძვირფასი შვილი ყოველ ჯერზე დიდი სიხარულით მირბის მეცადინეობებზე.",
+          ru:"Самая тёплая и дружелюбная атмосфера, самые любящие люди. Наш любимый ребёнок каждый раз с огромной радостью бежит на занятия.",
+          en:"The warmest, friendliest atmosphere and the most loving people. Our dear child runs to every class with great joy."} },
+  { who:"Lina M.",
+    text:{ru:"Отличный садик, ходим чуть больше полугода, ребёнок идёт с удовольствием. Рекомендую!",
+          ka:"შესანიშნავი ბაღი, ნახევარ წელზე მეტია დავდივართ, ბავშვი სიამოვნებით მიდის. გირჩევთ!",
+          en:"A great kindergarten — we've been coming for over six months and our child goes happily. Recommended!"} },
+  { who:"Nia D.",
+    text:{ru:"Ребёнок ходит с огромным удовольствием! Жалеем, что не начали ходить раньше.",
+          ka:"ბავშვი უდიდესი სიამოვნებით დადის! ვნანობთ, რომ ადრე არ დავიწყეთ.",
+          en:"Our child absolutely loves it! We only regret not starting sooner."} },
+];
 // ───────────────────────────────────────────────────────────────────────
 const TG = "https://t.me/centre_gimili";
 const C = { pink:"#e8178a", green:"#22a83a", blue:"#1a8fe0", navy:"#1b3cae", red:"#e5261f", sun:"#f5b400" };
@@ -510,7 +565,7 @@ const T = {
     heroTitle:"ვსწავლობთ, ვთამაშობთ და ვიზრდებით <em>ღიმილით</em>",
     heroLead:"მინი-ბაღი, წრეები, სკოლისთვის მომზადება, ინგლისური და სპეციალისტები — ერთ თბილ და ფერად სივრცეში, სახლთან ახლოს.",
     chooseTitle:"სად მოგწეროთ?", close:"დახურვა", waHello:"გამარჯობა! მინდა ჩაწერა საცდელ გაკვეთილზე", ctaTrial:"ჩაწერა საცდელ გაკვეთილზე", ctaTrialShort:"ჩაწერა", call:"დარეკვა",
-    trust:["პატარა ჯგუფები","ორშ–შაბ","ქართული და რუსული სექტორი","ინდივიდუალური გაკვეთილები"],
+    trust:["4,7 ★ Google-ში","პატარა ჯგუფები","ორშ–შაბ","ქართული და რუსული სექტორი","ინდივიდუალური გაკვეთილები"],
     tiles:[["garden","house",C.pink,"მინი-ბაღი","ორშ–პარ, 10:00-დან"],["clubs","star",C.green,"წრეები","11 მიმართულება"],["clubs:school","book",C.red,"სკოლისთვის მომზადება","ქართული და რუსული სექტორი"],["specialists","ear",C.blue,"სპეციალისტები","ლოგოპედი, ტომატისი"]],
     more:"ვრცლად →",
     gardenTitle:"მინი-ბაღი", gardenLead:"ორშაბათიდან პარასკევამდე, პატარა ჯგუფებში — ბავშვი თამაშობს, სწავლობს და მეგობრობს.", gardenCardTitle:"დღე, რომელიც ბავშვს უყვარს",
@@ -520,7 +575,7 @@ const T = {
     cats:[["all","ყველა"],["art","შემოქმედება"],["lang","ენები"],["school","სკოლისთვის"],["dev","განვითარება"],["solo","ინდივიდუალური"]],
     ask:"ჩაწერა →", appt:"წინასწარი ჩაწერით", from:"", perM:"₾ / თვე", perL:"₾ / გაკვ.", perC:"₾ / კურსი", exp:n => `${n}+ წლის გამოცდილება`,
     specTitle:"სპეციალისტები", specLead:"ინდივიდუალური მუშაობა წინასწარი ჩაწერით.", specBtn:"ჩაწერა", mcBtn:"თარიღების გაგება",
-    photosTitle:"როგორ გამოიყურება ღიმილი", teamTitle:"ჩვენი პედაგოგები", teamLead:"გამოცდილი და მზრუნველი გუნდი — 3-დან 9 წლამდე და მეტი გამოცდილებით.", reviewsTitle:"მშობლების შეფასებები",
+    photosTitle:"როგორ გამოიყურება ღიმილი", teamTitle:"ჩვენი პედაგოგები", teamLead:"გამოცდილი და მზრუნველი გუნდი — 3-დან 9 წლამდე და მეტი გამოცდილებით.", reviewsTitle:"მშობლების შეფასებები", allReviews:"ყველა შეფასება Google-ში", moreReviews:"მეტის ნახვა", gCount:n => `${n} შეფასება Google-ში`,
     stepsTitle:"როგორ დავიწყოთ", steps:[["დაგვიწერეთ ან დაგვირეკეთ","გვითხარით ბავშვის ასაკი და რა აინტერესებს."],["მოდით საცდელ გაკვეთილზე","გაიცანით ცენტრი, პედაგოგი და ჯგუფი."],["აირჩიეთ განრიგი","შეარჩიეთ მოსახერხებელი დღეები და დრო."]],
     schedTitle:"კვირის განრიგი", schedLead:"მინი-ბაღი ორშაბათიდან პარასკევამდე, 10:00-დან. ინდივიდუალური გაკვეთილები შეთანხმებით.", gardenShort:"მინი-ბაღი",
     faqTitle:"ხშირი კითხვები",
@@ -538,7 +593,7 @@ const T = {
     heroTitle:"Учимся, играем и растём <em>с улыбкой</em>",
     heroLead:"Мини-садик, кружки, подготовка к школе, английский и специалисты — в одном тёплом и ярком месте рядом с домом.",
     chooseTitle:"Где вам удобнее написать?", close:"Закрыть", waHello:"Здравствуйте! Хочу записаться на пробное занятие", ctaTrial:"Записаться на пробное занятие", ctaTrialShort:"Записаться", call:"Позвонить",
-    trust:["Небольшие группы","Пн–Сб","Грузинский и русский сектор","Индивидуальные занятия"],
+    trust:["4,7 ★ в Google","Небольшие группы","Пн–Сб","Грузинский и русский сектор","Индивидуальные занятия"],
     tiles:[["garden","house",C.pink,"Мини-садик","Пн–Пт, с 10:00"],["clubs","star",C.green,"Кружки","11 направлений"],["clubs:school","book",C.red,"Подготовка к школе","Грузинский и русский сектор"],["specialists","ear",C.blue,"Специалисты","Логопед, Томатис"]],
     more:"Подробнее →",
     gardenTitle:"Мини-садик", gardenLead:"С понедельника по пятницу, в небольших группах — ребёнок играет, учится и дружит.", gardenCardTitle:"День, который ребёнок любит",
@@ -548,7 +603,7 @@ const T = {
     cats:[["all","Все"],["art","Творчество"],["lang","Языки"],["school","К школе"],["dev","Развитие"],["solo","Индивидуально"]],
     ask:"Записаться →", appt:"По записи", from:"от", perM:"₾ / мес", perL:"₾ / занятие", perC:"₾ / курс", exp:n => `опыт более ${n} лет`,
     specTitle:"Специалисты", specLead:"Индивидуальная работа по предварительной записи.", specBtn:"Записаться", mcBtn:"Узнать даты",
-    photosTitle:"Как выглядит ღიმილი", teamTitle:"Наши педагоги", teamLead:"Опытная и заботливая команда — от 3 до 9+ лет опыта.", reviewsTitle:"Отзывы родителей",
+    photosTitle:"Как выглядит ღიმილი", teamTitle:"Наши педагоги", teamLead:"Опытная и заботливая команда — от 3 до 9+ лет опыта.", reviewsTitle:"Отзывы родителей", allReviews:"Все отзывы в Google", moreReviews:"Показать ещё", gCount:n => `${n} отзывов в Google`,
     stepsTitle:"Как начать", steps:[["Напишите или позвоните","Расскажите возраст ребёнка и что ему интересно."],["Приходите на пробное занятие","Познакомьтесь с центром, педагогом и группой."],["Выберите расписание","Подберём удобные дни и время."]],
     schedTitle:"Расписание на неделю", schedLead:"Мини-садик с понедельника по пятницу с 10:00. Индивидуальные занятия по договорённости.", gardenShort:"Мини-садик",
     faqTitle:"Частые вопросы",
@@ -566,7 +621,7 @@ const T = {
     heroTitle:"Learning, playing and growing <em>with a smile</em>",
     heroLead:"Mini kindergarten, clubs, school preparation, English and specialists — in one warm, colourful place close to home.",
     chooseTitle:"How would you like to reach us?", close:"Close", waHello:"Hello! I would like to book a trial lesson", ctaTrial:"Book a trial lesson", ctaTrialShort:"Book", call:"Call",
-    trust:["Small groups","Mon–Sat","Georgian & Russian sector","One-to-one lessons"],
+    trust:["4.7 ★ on Google","Small groups","Mon–Sat","Georgian & Russian sector","One-to-one lessons"],
     tiles:[["garden","house",C.pink,"Mini garden","Mon–Fri, from 10:00"],["clubs","star",C.green,"Clubs","11 activities"],["clubs:school","book",C.red,"School preparation","Georgian & Russian sector"],["specialists","ear",C.blue,"Specialists","Speech therapist, Tomatis"]],
     more:"Learn more →",
     gardenTitle:"Mini kindergarten", gardenLead:"Monday to Friday, in small groups — children play, learn and make friends.", gardenCardTitle:"A day children love",
@@ -576,7 +631,7 @@ const T = {
     cats:[["all","All"],["art","Creative"],["lang","Languages"],["school","School prep"],["dev","Development"],["solo","One to one"]],
     ask:"Book →", appt:"By appointment", from:"from", perM:"₾ / month", perL:"₾ / lesson", perC:"₾ / course", exp:n => `${n}+ years of experience`,
     specTitle:"Specialists", specLead:"Individual sessions by appointment.", specBtn:"Book", mcBtn:"Ask for dates",
-    photosTitle:"Inside ღიმილი", teamTitle:"Our teachers", teamLead:"An experienced, caring team — from 3 to 9+ years of experience.", reviewsTitle:"What parents say",
+    photosTitle:"Inside ღიმილი", teamTitle:"Our teachers", teamLead:"An experienced, caring team — from 3 to 9+ years of experience.", reviewsTitle:"What parents say", allReviews:"All reviews on Google", moreReviews:"Show more", gCount:n => `${n} reviews on Google`,
     stepsTitle:"How to start", steps:[["Message or call us","Tell us your child's age and interests."],["Come to a trial lesson","Meet the centre, the teacher and the group."],["Pick a schedule","Choose the days and times that suit you."]],
     schedTitle:"Weekly schedule", schedLead:"The mini garden is open Monday to Friday from 10:00. Private lessons by arrangement.", gardenShort:"Mini garden",
     faqTitle:"Questions parents ask",
@@ -592,7 +647,7 @@ const T = {
 };
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 const $ = id => document.getElementById(id);
-let lang = "ka", cat = "all", day = Math.min(Math.max(new Date().getDay(), 1), 6);
+let allReviews = false, lang = "ka", cat = "all", day = Math.min(Math.max(new Date().getDay(), 1), 6);
 const priceHtml = (p, unit) => SHOW_PRICES && p ? `<span class="price">${T[lang].from ? `<small>${esc(T[lang].from)}</small>` : ""}<b>${p}</b><small>${esc(unit === "l" ? T[lang].perL : unit === "c" ? T[lang].perC : T[lang].perM)}</small></span>` : "";
 const teacherLine = (id, light) => { const p = TEAM.find(x => x.id === id); return p ? `<span class="who${light ? " light" : ""}">${ICON.one}${esc(p.name[lang])}</span>` : ""; };
 const dayRange = days => days.length === 5 ? `${SHORT[lang][0]}–${SHORT[lang][4]}` : days.map(d => SHORT[lang][d - 1]).join(" · ");
@@ -629,7 +684,10 @@ function render(next) {
   $("steps").innerHTML = t.steps.map(([b, s], i) => `<li style="--c:${[C.pink, C.green, C.blue][i]}"><b>${esc(b)}</b><span>${esc(s)}</span></li>`).join("");
   $("photos").hidden = !PHOTOS.length; $("gallery").innerHTML = PHOTOS.map(src => `<img src="${esc(src)}" alt="" loading="lazy">`).join("");
   $("team").hidden = !TEAM.length; $("teamList").innerHTML = TEAM.map(p => `<div class="person" style="--c:${p.c}">${p.photo ? `<img src="${esc(p.photo)}" alt="${esc(p.name[lang])}" loading="lazy">` : `<span class="ava" style="--c:${p.c}">${esc(p.name[lang].slice(0, 1))}</span>`}<b>${esc(p.name[lang])}</b>${p.exp ? `<span class="exp">${esc(T[lang].exp(p.exp))}</span>` : ""}<small>${esc(p.role[lang])}</small></div>`).join("");
-  $("reviews").hidden = !REVIEWS.length; $("reviewList").innerHTML = REVIEWS.map(r => `<figure class="review"><blockquote>“${esc(r.text[lang] || r.text.ka)}”</blockquote><figcaption>${esc(r.who)}</figcaption></figure>`).join("");
+  $("reviews").hidden = !REVIEWS.length; $("reviewList").innerHTML = REVIEWS.map((r, i) => `<figure class="review" ${i >= 6 && !allReviews ? "hidden" : ""}><blockquote>“${esc(r.text[lang] || r.text.ru)}”</blockquote><figcaption>${esc(r.who)} · Google</figcaption></figure>`).join("");
+  $("moreReviews").parentElement.hidden = allReviews || REVIEWS.length <= 6;
+  $("gbadge").innerHTML = `<b>${String(GOOGLE_RATING.stars).replace(".", lang === "en" ? "." : ",")}</b><span class="stars">★★★★★</span><small>${esc(t.gCount(GOOGLE_RATING.count))}</small>`;
+  $("gLink").href = GOOGLE_RATING.url;
   renderWeek();
   $("faqList").innerHTML = t.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
   try { localStorage.setItem("gimili_site_lang", lang); } catch (_) {}
@@ -640,6 +698,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-lang]"); if (b) return render(b.dataset.lang);
   const f = e.target.closest("[data-cat]"); if (f) { cat = f.dataset.cat; return renderClubs(); }
   const d = e.target.closest("[data-day]"); if (d) { day = +d.dataset.day; return renderWeek(); }
+  if (e.target.closest("#moreReviews")) { allReviews = true; document.querySelectorAll("#reviewList .review").forEach(x => x.hidden = false); $("moreReviews").parentElement.hidden = true; return; }
   const tile = e.target.closest("[data-filter]"); if (tile) { cat = tile.dataset.filter; renderClubs(); }
 });
 // "Book" buttons: choose WhatsApp, Telegram or a call (WhatsApp gets a ready message)
