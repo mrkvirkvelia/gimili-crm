@@ -219,6 +219,18 @@ class CRMTest(unittest.TestCase):
         text = self.page.inner_text('#view')
         self.assertIn('Instagram', text); self.assertIn('WhatsApp', text); self.assertIn('17.9%', text)
 
+    def test_directions_profit(self):
+        self.open(1366)
+        self.js("paymentForSubject('k1','c1')"); self.submit()   # 150 for mental arithmetic, teacher 50%
+        res = self.js("(() => { const r = directionStats(['2026-11']); return { rows: r.rows.map(x => [x.name, x.revenue, x.teachers, x.margin, Math.round(x.overhead), Math.round(x.net)]), total: r.total }; })()")
+        rows = {r[0]: r for r in res['rows']}
+        self.assertEqual(rows['მენტალური არითმეტიკა'][1:4], [150, 75, 75])
+        self.assertEqual(rows['კრაფტი'][1:4], [150, 45, 105])          # 150 paid; 45 earned by the teacher
+        self.assertEqual(rows['ტომატისი'][1:4], [100, 60, 40])          # Ekaterine's settlement
+        self.assertAlmostEqual(res['total']['net'], res['total']['margin'] - res['total']['overhead'], places=6)
+        self.js("analyticsTab='dirs'; go('analytics')"); self.page.wait_for_timeout(150)
+        self.assertIn('მიმართულებები', self.page.inner_text('#view'))
+
     # ---------- months ----------
     def test_september_is_hidden(self):
         self.open()

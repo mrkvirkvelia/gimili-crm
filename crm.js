@@ -2020,7 +2020,85 @@ function statBars(list, labels = {}, base = null) {
   const max = base || Math.max(...rows.map(r => r[1]));
   return `<div class="stat-bars">${rows.map(([k, v]) => `<div class="stat-bar"><span>${esc(labels[k] || k)}</span><i style="--w:${Math.max(3, Math.round(v / max * 100))}%"></i><b>${v}${base ? ` <small>${Math.round(v / base * 100)}%</small>` : ''}</b></div>`).join('')}</div>`;
 }
+// ---------- Directions: which circle / garden option earns the most ----------
+// Revenue = payments for the period's billing months (+ what specialists on weekly settlement collected).
+// Teachers = what was accrued to teachers for that direction; the garden's fixed salaries are shared
+// between the garden options by their revenue. Overheads (rent, utilities, ads, bank, personnel…) are
+// shared between all directions by revenue, giving each one's net profit.
+let analyticsTab = 'site', dirPeriod = 'month';
+function setAnalyticsTab(tab) { analyticsTab = tab; go('analytics'); }
+function setDirPeriod(p) { dirPeriod = p; go('analytics'); }
+function dirMonths() {
+  const m = todayMonth();
+  const list = dirPeriod === 'prev' ? [shiftMonth(m, -1)] : dirPeriod === '3m' ? [shiftMonth(m, -2), shiftMonth(m, -1), m] : [m];
+  return list.filter(k => k >= CRM_START_MONTH);
+}
+function directionStats(months) {
+  const rows = new Map();
+  const nameOf = sid => sid ? (get('clubs', sid)?.name || 'წაშლილი წრე') : 'მინი-ბაღი · საერთო ტარიფი';
+  const row = (sid, name = nameOf(sid), section = sid ? circleSection(get('clubs', sid)) : 'garden') => {
+    const key = sid || 'base';
+    if (!rows.has(key)) rows.set(key, { key, sid, name, section, revenue: 0, teachers: 0, kids: new Set(), debt: 0 });
+    return rows.get(key);
+  };
+  let gardenPool = 0, overhead = 0;
+  months.forEach(month => {
+    const range = monthRange(month);
+    data.payments.filter(p => paymentMonthOf(p) === month).forEach(p => { const r = row(p.subjectId || ''); r.revenue += number(p.amount); if (p.childId) r.kids.add(p.childId); });
+    settlementsForMonth(month).forEach(s => {
+      const r = s.subjectId && get('clubs', s.subjectId) ? row(s.subjectId) : row('settle-' + s.staffId, `${get('staff', s.staffId)?.name || 'სპეციალისტი'} · კვირის დახურვა`, 'specialists');
+      r.revenue += number(s.total); r.teachers += settlementShare(s); if (s.childId) r.kids.add(s.childId);
+    });
+    teacherStaff().filter(person => !isSettlementStaff(person)).forEach(person => teacherAccrualBreakdown(person, range, 1).forEach(line => {
+      if (line.section === 'garden') gardenPool += line.amount;
+      else if (line.subject && line.amount) row(line.subject.id).teachers += line.amount;
+    }));
+    eventsInRange(range).forEach(ev => { row(ev.id).teachers += Math.max(eventHostAccrued(ev), eventHostPaid(ev)); });
+    billingRows(month).forEach(b => { const left = number(b.remaining); if (left > 0) row(b.subject?.id || '').debt += left; });
+    const pay = payroll(range, 1);
+    overhead += nonSalaryExpensesForMonth(month) - eventsHostCost(range)
+      + pay.rows.filter(r => isPersonnel(r.person)).reduce((sum, r) => sum + r.cost, 0) + number(pay.unassigned);
+  });
+  const list = [...rows.values()].filter(r => r.revenue || r.teachers || r.debt);
+  const garden = list.filter(r => r.section === 'garden'), gardenRevenue = garden.reduce((s, r) => s + r.revenue, 0);
+  if (gardenRevenue > 0) garden.forEach(r => { r.teachers += gardenPool * r.revenue / gardenRevenue; }); else overhead += gardenPool;
+  const revenue = list.reduce((s, r) => s + r.revenue, 0);
+  list.forEach(r => {
+    r.margin = r.revenue - r.teachers;
+    r.overhead = revenue ? overhead * r.revenue / revenue : 0;
+    r.net = r.margin - r.overhead;
+    r.children = r.kids.size;
+  });
+  list.sort((a, b) => b.net - a.net);
+  const sum = k => list.reduce((s, r) => s + r[k], 0);
+  return { rows: list, total: { revenue, teachers: sum('teachers'), margin: sum('margin'), overhead: revenue ? overhead : 0, net: sum('net'), debt: sum('debt'), unshared: revenue ? 0 : overhead } };
+}
+function directionsView() {
+  const months = dirMonths(), { rows, total } = directionStats(months);
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  const best = Math.max(1, ...rows.map(r => Math.abs(r.net)));
+  const period = [['month', 'ეს თვე'], ['prev', 'წინა თვე'], ['3m', '3 თვე']];
+  return `<div class="status-tabs">${period.map(([k, l]) => `<button class="${dirPeriod === k ? 'active' : ''}" onclick="setDirPeriod('${k}')">${l}</button>`).join('')}</div>
+  <p class="meta">${months.map(prettyMonth).join(' · ') || '—'}</p>
+  <section class="section card"><div class="profile-details stat-kpis">
+    <div><small>შემოსავალი</small><b>${money(total.revenue)}</b></div>
+    <div><small>მასწავლებლები</small><b>${money(total.teachers)}</b></div>
+    <div><small>მარჟა მასწავლებლების შემდეგ</small><b>${money(total.margin)} <small>${pct(total.margin, total.revenue)}%</small></b></div>
+    <div><small>საერთო ხარჯები</small><b>${money(total.overhead)}</b></div>
+    <div><small>წმინდა მოგება</small><b class="${total.net < 0 ? 'danger-text' : 'ok-text'}">${money(total.net)}</b></div>
+    <div><small>ვალი (გადაუხდელი)</small><b class="${total.debt > 0 ? 'danger-text' : ''}">${money(total.debt)}</b></div>
+  </div></section>
+  ${rows.length ? `<div class="dir-list">${rows.map((r, i) => `<section class="section card dir-row">
+    <div class="dir-head"><span class="dir-rank">${i + 1}</span><div><h3>${r.sid && get('clubs', r.sid) ? `<button class="link-btn" onclick="showCircle('${esc(r.sid)}')">${esc(r.name)} ›</button>` : esc(r.name)}</h3><small class="meta">${esc(SECTIONS.find(([k]) => k === r.section)?.[1] || '')}${r.children ? ` · ${r.children} ბავშვი · ${money(r.revenue / r.children)} ერთზე` : ''}</small></div>
+    <b class="dir-net ${r.net < 0 ? 'danger-text' : 'ok-text'}">${money(r.net)}</b></div>
+    <i class="dir-bar ${r.net < 0 ? 'neg' : ''}" style="--w:${Math.max(2, Math.round(Math.abs(r.net) / best * 100))}%"></i>
+    <div class="dir-nums"><span><small>შემოსავალი</small>${money(r.revenue)}</span><span><small>მასწავლებელი</small>−${money(r.teachers)}</span><span><small>მარჟა</small>${money(r.margin)} <em>${pct(r.margin, r.revenue)}%</em></span><span><small>საერთო ხარჯის წილი</small>−${money(r.overhead)}</span>${r.debt ? `<span><small>ვალი</small><b class="danger-text">${money(r.debt)}</b></span>` : ''}</div>
+  </section>`).join('')}</div>` : '<p class="meta">ამ პერიოდში შემოსავალი ჯერ არ არის.</p>'}
+  <p class="section-note">მარჟა = შემოსავალი − მასწავლებლის დარიცხვა. ბაღის ფიქსირებული ხელფასები ბაღის ვარიანტებს შორის შემოსავლის პროპორციულად ნაწილდება. საერთო ხარჯები (ქირა, კომუნალური, რეკლამა, ბანკი, პერსონალი…) ყველა მიმართულებას შემოსავლის პროპორციულად ენაწილება — ასე ჩანს წმინდა მოგება.</p>`;
+}
 function analytics() {
+  const tabs = `<div class="status-tabs analytics-tabs"><button class="${analyticsTab === 'site' ? 'active' : ''}" onclick="setAnalyticsTab('site')">საიტი</button><button class="${analyticsTab === 'dirs' ? 'active' : ''}" onclick="setAnalyticsTab('dirs')">მიმართულებები</button></div>`;
+  if (analyticsTab === 'dirs') return `${head('ანალიტიკა', 'მიმართულებების მომგებიანობა')}${tabs}${directionsView()}`;
   const rows = statsRows(statsDays), { total, lists } = sumStats(rows);
   // one row per day normally; if a day ever has several rows, add them up
   const byDay = new Map(); rows.forEach(row => { const d = String(row.date || row.id); const was = byDay.get(d) || {}; byDay.set(d, { visitors: number(was.visitors) + number(row.visitors), contacts: number(was.contacts) + number(row.contacts) }); });
@@ -2028,7 +2106,7 @@ function analytics() {
   const peak = Math.max(1, ...days.map(d => number(byDay.get(d)?.visitors)));
   const conv = total.visitors ? Math.round(total.contacts / total.visitors * 1000) / 10 : 0;
   const empty = !(data.stats || []).length;
-  return `${head('ანალიტიკა', 'gimili.ge · საიტის სტატისტიკა')}
+  return `${head('ანალიტიკა', 'gimili.ge · საიტის სტატისტიკა')}${tabs}
   <div class="status-tabs">${[7, 30, 90].map(n => `<button class="${statsDays === n ? 'active' : ''}" onclick="setStatsDays(${n})">${n} დღე</button>`).join('')}</div>
   ${empty ? `<p class="section-note">სტატისტიკა ჯერ არ შემოსულა. ის ავტომატურად გამოჩნდება, როცა საიტის ანალიტიკა ჩაირთვება და პირველი სტუმრები შემოვლენ.</p>` : ''}
   <section class="section card"><div class="profile-details stat-kpis">
