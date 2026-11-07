@@ -1,7 +1,33 @@
 # Made with Claude (Anthropic) · © Homes in Georgia · Created by Irakli Kvirkvelia
+# Search engines and AI assistants are welcome to read the centre's public pages.
 User-agent: *
+Allow: /
 Disallow: /crm
 Disallow: /crm.html
 Disallow: /login.html
 Disallow: /tests/
+Disallow: /tools/
+Disallow: /src/
+
+# AI search and assistants (ChatGPT, Claude, Perplexity, Google AI, Apple, Bing Copilot)
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Bingbot
+User-agent: YandexBot
+Allow: /
+Disallow: /crm
+Disallow: /crm.html
+Disallow: /login.html
+Disallow: /tests/
+Disallow: /tools/
+Disallow: /src/
+
 Sitemap: https://gimili.ge/sitemap.xml
