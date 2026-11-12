@@ -134,6 +134,40 @@ class CRMTest(unittest.TestCase):
                 self.assertTrue(self.page.inner_text('#view').strip(), f'{view} is empty at {width}px')
                 self.assertFalse(self.js('document.documentElement.scrollWidth > innerWidth + 1'), f'{view} scrolls sideways at {width}px')
 
+    # ---------- the same money figures on every screen ----------
+    def test_income_is_the_same_on_every_screen(self):
+        # October lesson paid on 2 November: belongs to October everywhere
+        self.open(extra={'payments': [{'id': 'late', 'childId': 'k1', 'subjectId': 'c1', 'amount': 150, 'date': '2026-11-02', 'billingMonth': '2026-10', 'method': 'cash'}]})
+        for period, month in (('month', '2026-11'), ('prev', '2026-10')):
+            self.js(f"period='{period}'")
+            totals = self.js("(() => { const t = accountingTotals(); return [t.income, t.totalExpenses, t.profit]; })()")
+            fin = self.js(f"(() => {{ const f = monthFinance('{month}'); return [f.income, f.expenses, f.profit]; }})()")
+            self.assertEqual(totals, fin, f'dashboard and accounting differ for {month}')
+        self.assertEqual(self.js("monthFinance('2026-10').income"), 300)
+        self.assertEqual(self.js("monthSummary('2026-11').income"), self.js("monthFinance('2026-11').income"))
+        self.js("period='month'; go('dashboard'); go('reports')")
+        self.assertEqual(self.errors, [])
+
+    # ---------- old debts after closing a month ----------
+    def test_closed_month_debts(self):
+        self.open(extra={'children': [
+            {'id': 'g1', 'name': 'გიო', 'tariff': 350, 'group': 'მინი-ბაღი', 'paymentDay': 3, 'active': True, 'paidMarkerMonth': '2026-10'},
+            {'id': 'd1', 'name': 'დათო', 'activityIds': ['c1'], 'paymentDay': 5, 'active': True, 'activityStart': {'c1': '2026-10-01'}},
+        ]})
+        self.js("confirmCloseMonth('2026-10')"); self.page.wait_for_timeout(300)
+        self.assertEqual(self.js("oldDebts('g1').length"), 0, 'a month marked as paid is not a debt after closing')
+        self.assertEqual(self.js("oldDebts('d1').map(b => b.remaining)"), [150])
+        self.db['payments'].insert(0, {'id': 'pd', 'childId': 'd1', 'subjectId': 'c1', 'amount': 100, 'date': '2026-11-20', 'billingMonth': '2026-10', 'method': 'cash'})
+        self.js("data.payments.unshift({id:'pd',childId:'d1',subjectId:'c1',amount:100,date:'2026-11-20',billingMonth:'2026-10',method:'cash'})")
+        self.assertEqual(self.js("oldDebts('d1').map(b => b.remaining)"), [50], 'a payment after closing lowers the old debt')
+
+    def test_circle_name_with_apostrophe(self):
+        self.open(extra={'clubs': [{'id': 'cx', 'name': "Kid's art", 'billingType': 'monthly', 'tariff': 100, 'section': 'specialists', 'teacherId': 't4'}],
+                         'children': [{'id': 'kx', 'name': 'X', 'activityIds': ['cx'], 'active': True}]})
+        self.js("showChild('kx')"); self.page.wait_for_timeout(150)
+        self.page.locator("button:has-text('მოხსნა')").first.click(); self.page.wait_for_timeout(300)
+        self.assertNotIn('cx', self.js("get('children','kx').activityIds"))
+
     # ---------- menu: 5 sections with tabs ----------
     def test_menu_five_sections_with_tabs(self):
         old_menu = {'dashboard', 'schedule', 'children', 'parents', 'attendance', 'contacts', 'leads', 'clubs', 'staff',
