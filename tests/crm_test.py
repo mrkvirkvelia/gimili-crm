@@ -231,6 +231,27 @@ class CRMTest(unittest.TestCase):
         self.js("analyticsTab='dirs'; go('analytics')"); self.page.wait_for_timeout(150)
         self.assertIn('მიმართულებები', self.page.inner_text('#view'))
 
+    # ---------- dashboard: money of one day by circle ----------
+    def test_dashboard_day_earnings_by_circle(self):
+        self.open(extra={
+            'payments': [
+                {'id': 'd20a', 'childId': 'k1', 'subjectId': 'c1', 'amount': 150, 'date': '2026-11-20', 'billingMonth': '2026-11', 'method': 'cash'},
+                {'id': 'd20b', 'childId': 'k5', 'subjectId': 'c3', 'amount': 30, 'date': '2026-11-20', 'billingMonth': '2026-11', 'method': 'cash'},
+                {'id': 'd20c', 'childId': 'k4', 'subjectId': 'c3', 'amount': 30, 'date': '2026-11-20', 'billingMonth': '2026-11', 'method': 'deposit'},
+            ],
+            'deposits': [{'id': 'dep', 'childId': 'k1', 'type': 'in', 'amount': 500, 'date': '2026-11-20', 'method': 'cash'}],
+        })
+        rows = self.js("dayEarnings('2026-11-20').map(r => [r.name, r.amount, r.count])")
+        self.assertEqual(rows, [['მენტალური არითმეტიკა', 150, 1], ['კრაფტი', 60, 2]], 'deposit top-up is not income; paying from it is')
+        self.js("go('dashboard')"); self.page.wait_for_timeout(100)
+        text = self.page.inner_text('#view')
+        self.assertIn('დღის შემოსავალი წრეებით', text); self.assertIn('₾210', text)
+        self.js("shiftEarnDay(-15)"); self.page.wait_for_timeout(100)
+        self.assertEqual(self.js("dayEarnings(earnDay).map(r => [r.name, r.amount])"), [['კრაფტი', 30]])
+        self.js("shiftEarnDay(-1)"); self.page.wait_for_timeout(100)
+        self.assertIn('ამ დღეს გადახდები არ არის', self.page.inner_text('#view'))
+        self.js("shiftEarnDay(99)"); self.assertEqual(self.js("earnDay"), '', 'cannot go past today')
+
     # ---------- months ----------
     def test_september_is_hidden(self):
         self.open()
