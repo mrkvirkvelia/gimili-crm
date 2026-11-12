@@ -247,6 +247,15 @@ class CRMTest(unittest.TestCase):
         row = self.js("payroll(monthRange('2026-11'),1).rows.find(r=>r.person.id==='s1')")
         self.assertEqual((row['accrued'], row['paid'], row['due']), (1000, 300, 700))
         self.assertIn('700', self.page.inner_text('#view'))
+        self.assertEqual(row['cost'], 1000, 'the month costs the whole salary, not only the advance')
+
+    def test_month_cost_is_whole_salary(self):
+        self.open()
+        oct_t1 = self.js("payroll(monthRange('2026-10'),1).rows.find(r=>r.person.id==='t1')")
+        self.assertEqual(oct_t1['cost'], max(oct_t1['accrued'], oct_t1['paid']))
+        nov = self.js("payroll(monthRange('2026-11'),1).rows.find(r=>r.person.id==='s1')")
+        self.assertEqual((nov['paid'], nov['cost']), (0, 1000), 'unpaid fixed salary still counts in the month')
+        self.assertEqual(self.js("monthFinance('2026-11').salaries"), self.js("payroll(monthRange('2026-11'),1).total"))
 
     def test_salary_counts_for_the_month_it_was_given_for(self):
         self.open()

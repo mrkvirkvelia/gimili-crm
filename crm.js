@@ -878,9 +878,8 @@ function payroll(range, months) {
   const rows = data.staff.map(person => {
     const own = salaryExpenses.filter(item => salaryExpenseFor(person, item)); own.forEach(item => used.add(item.id));
     const paid = own.reduce((sum,item) => sum + number(item.amount), 0), accrued = personAccrued(person, range, months);
-    // Fixed salaries (personnel, garden teachers) count only when actually paid out; percent/rate pay counts as accrued until paid.
-    const fixedPart = isPersonnel(person) ? accrued : isSettlementStaff(person) ? 0 : teacherAccrualBreakdown(person, range, months).filter(line => line.section === 'garden').reduce((sum, line) => sum + line.amount, 0);
-    return { person, accrued, paid, fixedPart, cost: paid > 0 ? paid : Math.max(0, accrued - fixedPart), due: Math.max(0, accrued - paid) };
+    // The month's cost is the whole accrued salary, even if only an advance was given so far; if more was given (a bonus), what was given.
+    return { person, accrued, paid, cost: Math.max(accrued, paid), due: Math.max(0, accrued - paid) };
   });
   const unassigned = salaryExpenses.filter(item => !used.has(item.id)).reduce((sum,item) => sum + number(item.amount), 0);
   return { rows, unassigned, total: rows.reduce((sum,row) => sum + row.cost, 0) + unassigned,
@@ -965,12 +964,12 @@ function monthFinanceUncached(month) {
   const hosts = eventsHostCost(range); if (hosts) byCategory['მასტერკლასის წამყვანი'] = hosts;
   const otherExpenses = Object.values(byCategory).reduce((a, b) => a + b, 0);
   const teachersBySection = Object.fromEntries(SECTIONS.map(([key]) => [key, 0]));
-  // Same rule as the totals: paid amount if paid (split by section in proportion to accrual), otherwise accrued without the unpaid fixed garden salary.
+  // Same rule as the totals: the person's cost (whole accrued salary, or more if more was given), split by section in proportion to accrual.
   teacherRows.forEach(row => {
     const lines = teacherAccrualBreakdown(row.person, range, 1), accrued = lines.reduce((sum, line) => sum + line.amount, 0);
     const add = (section, amount) => { teachersBySection[section] = (teachersBySection[section] || 0) + amount; };
-    if (row.paid > 0) { if (accrued > 0) lines.forEach(line => add(line.section, row.paid * line.amount / accrued)); else add(lines[0]?.section || circleSection(teacherCircles(row.person.id)[0]) || 'circles', row.paid); }
-    else lines.filter(line => line.section !== 'garden').forEach(line => add(line.section, line.amount));
+    if (accrued > 0) lines.forEach(line => add(line.section, row.cost * line.amount / accrued));
+    else if (row.cost > 0) add(lines[0]?.section || circleSection(teacherCircles(row.person.id)[0]) || 'circles', row.cost);
   });
   teachersBySection.events += hosts;
   const debt = month <= todayMonth() ? billingRows(month).reduce((sum, row) => sum + number(row.remaining), 0) : 0;
