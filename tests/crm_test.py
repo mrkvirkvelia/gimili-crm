@@ -134,6 +134,39 @@ class CRMTest(unittest.TestCase):
                 self.assertTrue(self.page.inner_text('#view').strip(), f'{view} is empty at {width}px')
                 self.assertFalse(self.js('document.documentElement.scrollWidth > innerWidth + 1'), f'{view} scrolls sideways at {width}px')
 
+    # ---------- menu: 5 sections with tabs ----------
+    def test_menu_five_sections_with_tabs(self):
+        old_menu = {'dashboard', 'schedule', 'children', 'parents', 'attendance', 'contacts', 'leads', 'clubs', 'staff',
+                    'payments', 'expenses', 'accounting', 'months', 'reports', 'analytics', 'tasks', 'sourceTable', 'settings'}
+        page = self.open(1366)
+        self.assertEqual(self.js("MENU.length"), 5)
+        self.assertEqual(set(self.js("MENU.flatMap(s => s[3].map(p => p[0]))")), old_menu, 'every screen of the old menu is still in the menu')
+        self.assertEqual(page.locator('#sidebar .side-group > .side-item').count(), 5)
+        self.js("go('accounting')"); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('#view .section-tabs button').count(), 6)
+        self.assertEqual(page.inner_text('#view .section-tabs button.active'), 'ბუღალტერია')
+        self.assertEqual(page.locator('#sidebar .side-subitem.active').inner_text(), 'ბუღალტერია')
+        page.click("#view .section-tabs button:has-text('ხარჯები')"); page.wait_for_timeout(100)
+        self.assertEqual(self.js('current'), 'expenses')
+        self.js("go('dashboard')"); self.js("openSection('money')")
+        self.assertEqual(self.js('current'), 'expenses', 'a section opens on the tab used last time')
+        self.js("go('dashboard')"); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('#view .section-tabs').count(), 0, 'one-page section has no tabs')
+        self.js("showChild('k1')"); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('#view .section-tabs').count(), 0, 'detail pages have no tabs')
+        self.assertIn('ბავშვები', page.locator('#sidebar .side-item.active').inner_text())
+        # phone: bottom bar highlights the section, the menu lists the 5 sections
+        page = self.open(390)
+        self.js("go('months')"); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('.nav button.active').get_attribute('data-section'), 'money')
+        self.js("go('attendance')"); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('.nav button.active').get_attribute('data-nav'), 'more')
+        self.js('toggleDrawer(true)'); page.wait_for_timeout(100)
+        self.assertEqual(page.locator('#drawerGrid .drawer-section').count(), 5)
+        page.click("#drawerGrid .drawer-section:has-text('ცენტრი')"); page.wait_for_timeout(100)
+        self.assertEqual(self.js('current'), 'clubs')
+        self.assertFalse(self.js('document.documentElement.scrollWidth > innerWidth + 1'))
+
     # ---------- billing ----------
     def test_monthly_circle_bill_and_payment(self):
         self.open()

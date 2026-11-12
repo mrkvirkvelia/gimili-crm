@@ -508,12 +508,11 @@ function go(view) {
   if (!signedInUser) return;
   resetBaseCache();
   current = view;
+  rememberSectionView(view);
   toggleDrawer(false);
-  const primaryViews = new Set(['dashboard','children','payments']);
-  document.querySelectorAll(".nav button[data-view]").forEach(button => button.classList.toggle("active", button.dataset.view === view || (view === 'childProfile' && button.dataset.view === 'children') || (view === 'staffProfile' && button.dataset.view === 'staff') || (view === 'circleProfile' && button.dataset.view === 'clubs')));
-  const more = document.querySelector('.nav button[data-nav="more"]');
-  if (more) more.classList.toggle('active', !primaryViews.has(view) && view !== 'childProfile');
-  $("view").innerHTML = (views[view] || views.dashboard)();
+  const section = menuSection(view)[0];
+  document.querySelectorAll(".nav button[data-section]").forEach(button => button.classList.toggle("active", button.dataset.section === section));
+  $("view").innerHTML = (views[view] ? sectionTabs(view) : '') + (views[view] || views.dashboard)();
   translateUi($("view"));
   renderDrawer();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1077,7 +1076,7 @@ function dashboard() {
 
 function children() {
   const allRows = data.children, rows = filteredByParticipantStatus('children', allRows);
-  return `${head('ბავშვები', `${allRows.length} ჩანაწერი`, '<button class="btn icon-btn" onclick="childForm()" aria-label="ბავშვის დამატება">＋</button>')}<button class="btn small secondary" style="margin-bottom:12px" onclick="go('contacts')">☎ კონტაქტები</button>${participantStatusTabs('children',allRows)}<input class="search" placeholder="ბავშვის ძებნა" aria-label="ბავშვების ძებნა" oninput="filterRows(this.value)">${rows.length?`<div class="list" id="rows">${rows.map(c=>{const circles=enrolledSubjects(c).map(item=>item.name);return `<article class="row clickable ${isActiveRecord(c,'children')?'':'record-inactive'}" data-search="${esc([c.name,c.parent,c.group,...circles].filter(Boolean).join(' '))}" onclick="showChild('${esc(c.id)}')"><div class="pic">${esc((c.name||'?').slice(0,1))}</div><div class="row-body"><div class="row-title">${esc(c.name)}</div><div class="meta">${esc(c.group||'ჯგუფი მითითებული არ არის')}<br><b>${circles.length?esc(circles.join(' · ')):'წრე მითითებული არ არის'}</b> · ${day(c.paymentDay)?`გადახდა ${day(c.paymentDay)} რიცხვში`:'გადახდის დღე არ არის'}</div></div><span class="badge ${isActiveRecord(c,'children')?'':'warn'}">${activeLabel(c,'children')}</span></article>`}).join('')}</div>`:empty(participantStatusFilter==='all'?'ბავშვების ჩანაწერები ჯერ არ არის':'ამ სტატუსით ბავშვები არ მოიძებნა',button('ბავშვის დამატება','childForm()'))}`;
+  return `${head('ბავშვები', `${allRows.length} ჩანაწერი`, '<button class="btn icon-btn" onclick="childForm()" aria-label="ბავშვის დამატება">＋</button>')}${participantStatusTabs('children',allRows)}<input class="search" placeholder="ბავშვის ძებნა" aria-label="ბავშვების ძებნა" oninput="filterRows(this.value)">${rows.length?`<div class="list" id="rows">${rows.map(c=>{const circles=enrolledSubjects(c).map(item=>item.name);return `<article class="row clickable ${isActiveRecord(c,'children')?'':'record-inactive'}" data-search="${esc([c.name,c.parent,c.group,...circles].filter(Boolean).join(' '))}" onclick="showChild('${esc(c.id)}')"><div class="pic">${esc((c.name||'?').slice(0,1))}</div><div class="row-body"><div class="row-title">${esc(c.name)}</div><div class="meta">${esc(c.group||'ჯგუფი მითითებული არ არის')}<br><b>${circles.length?esc(circles.join(' · ')):'წრე მითითებული არ არის'}</b> · ${day(c.paymentDay)?`გადახდა ${day(c.paymentDay)} რიცხვში`:'გადახდის დღე არ არის'}</div></div><span class="badge ${isActiveRecord(c,'children')?'':'warn'}">${activeLabel(c,'children')}</span></article>`}).join('')}</div>`:empty(participantStatusFilter==='all'?'ბავშვების ჩანაწერები ჯერ არ არის':'ამ სტატუსით ბავშვები არ მოიძებნა',button('ბავშვის დამატება','childForm()'))}`;
 }
 
 function confirmNotAlreadyPaid(childId, subjectId, month, amount) {
@@ -2184,24 +2183,39 @@ views.reports = () => {
   return baseReports() + `<div class="grid-cards section">${profits}${children}${breakdown}</div>`;
 };
 
-const NAV_GROUPS = [
-  ['', [['dashboard','⌂','მთავარი'],['schedule','▦','კალენდარი']]],
-  ['ბავშვები', [['children','☺','ბავშვები'],['parents','♡','მშობლები'],['attendance','✓','დასწრება'],['contacts','☎','კონტაქტები'],['leads','✉','განაცხადები']]],
-  ['ცენტრი', [['clubs','✦','წრეები'],['staff','♙','თანამშრომლები']]],
-  ['ფინანსები', [['payments','₾','გადახდები'],['expenses','−','ხარჯები'],['accounting','◫','ბუღალტერია'],['months','🔒','თვის დახურვა'],['reports','▤','სტატისტიკა']]],
-  ['სხვა', [['analytics','▲','ანალიტიკა'],['tasks','☑','ამოცანები'],['sourceTable','▥','საწყისი ცხრილი'],['settings','⚙','პარამეტრები']]],
+// ---------- Menu: 5 sections, the screens of a section are tabs at the top of the page ----------
+// [key, icon, title, [[view, tab label], ...]] — the first view is where the section opens the first time.
+const MENU = [
+  ['home', '⌂', 'მთავარი', [['dashboard','მთავარი']]],
+  ['kids', '☺', 'ბავშვები', [['children','ბავშვები'],['parents','მშობლები'],['contacts','კონტაქტები'],['leads','განაცხადები']]],
+  ['calendar', '▦', 'კალენდარი', [['schedule','კალენდარი'],['attendance','დასწრება']]],
+  ['money', '₾', 'ფინანსები', [['payments','გადახდები'],['expenses','ხარჯები'],['accounting','ბუღალტერია'],['months','თვის დახურვა'],['reports','სტატისტიკა'],['analytics','ანალიტიკა']]],
+  ['center', '✦', 'ცენტრი', [['clubs','წრეები'],['staff','თანამშრომლები'],['tasks','ამოცანები'],['settings','პარამეტრები'],['sourceTable','საწყისი ცხრილი']]],
 ];
-function navActive(id) { return id === current || (current === 'childProfile' && id === 'children'); }
+// Detail pages belong to the section of their list, but show no tabs (they have their own way back).
+const DETAIL_PARENT = { childProfile: 'children', staffProfile: 'staff', circleProfile: 'clubs', groups: 'clubs' };
+const menuSection = view => MENU.find(section => section[3].some(([id]) => id === (DETAIL_PARENT[view] || view))) || MENU[0];
+const lastViewInSection = {};
+function rememberSectionView(view) { const section = menuSection(view); if (section[3].some(([id]) => id === view)) lastViewInSection[section[0]] = view; }
+// Opening a section returns to the tab that was open there last time.
+function openSection(key) { const section = MENU.find(item => item[0] === key) || MENU[0]; go(lastViewInSection[section[0]] || section[3][0][0]); }
+function sectionTabs(view) {
+  if (DETAIL_PARENT[view]) return '';
+  const [, , title, pages] = menuSection(view);
+  if (pages.length < 2 || !pages.some(([id]) => id === view)) return '';
+  return `<div class="section-tabs" role="tablist" aria-label="${esc(title)}">${pages.map(([id, label]) => `<button type="button" role="tab" aria-selected="${id === view}" class="${id === view ? 'active' : ''}" onclick="go('${id}')">${esc(label)}</button>`).join('')}</div>`;
+}
+const isCurrentSection = key => menuSection(current)[0] === key;
 function renderDrawer() {
-  $("drawerGrid").innerHTML = NAV_GROUPS.map(([title, items]) => `${title?`<div class="drawer-group">${title}</div>`:''}${items.map(([id, icon, label]) => `<button class="drawer-item ${navActive(id)?'active':''}" onclick="go('${id}')"><span>${icon}</span>${label}</button>`).join('')}`).join('');
+  $("drawerGrid").innerHTML = MENU.map(([key, icon, title, pages]) => `<button class="drawer-item drawer-section ${isCurrentSection(key)?'active':''}" onclick="openSection('${key}')"><span>${icon}</span>${title}${pages.length > 1 ? `<small>${pages.map(([, label]) => esc(label)).join(' · ')}</small>` : ''}</button>`).join('');
   const side = $("sidebar");
-  if (side) side.innerHTML = `<div class="side-brand"><img src="assets/logo.webp" alt="ღიმილი"><div><small>ცენტრის CRM</small><b>${esc(signedInUser?.name || 'ღიმილი')}</b></div></div><button class="btn side-add" onclick="quickAdd()">＋ დამატება</button>${NAV_GROUPS.map(([title, items]) => `<nav class="side-group">${title?`<small>${title}</small>`:''}${items.map(([id, icon, label]) => `<button class="side-item ${navActive(id)?'active':''}" onclick="go('${id}')"><span>${icon}</span>${label}</button>`).join('')}</nav>`).join('')}<button class="side-item side-exit" onclick="logoutCRM()"><span>⎋</span>გასვლა</button>`;
+  if (side) side.innerHTML = `<div class="side-brand"><img src="assets/logo.webp" alt="ღიმილი"><div><small>ცენტრის CRM</small><b>${esc(signedInUser?.name || 'ღიმილი')}</b></div></div><button class="btn side-add" onclick="quickAdd()">＋ დამატება</button><nav class="side-group">${MENU.map(([key, icon, title, pages]) => `<button class="side-item ${isCurrentSection(key)?'active':''}" onclick="openSection('${key}')"><span>${icon}</span>${title}</button>${isCurrentSection(key) && pages.length > 1 ? `<div class="side-sub">${pages.map(([id, label]) => `<button class="side-subitem ${id === (DETAIL_PARENT[current] || current)?'active':''}" onclick="go('${id}')">${esc(label)}</button>`).join('')}</div>` : ''}`).join('')}</nav><button class="side-item side-exit" onclick="logoutCRM()"><span>⎋</span>გასვლა</button>`;
 }
 function toggleDrawer(open) {
   if (open) renderDrawer();
   $("drawer").classList.toggle("hidden", !open);
   const more = document.querySelector('.nav button[data-nav="more"]');
-  if (more) more.classList.toggle('active', open || !['dashboard','children','payments','childProfile'].includes(current));
+  if (more) more.classList.toggle('active', open || !document.querySelector(`.nav button[data-section="${menuSection(current)[0]}"]`));
 }
 function filterRows(query) { document.querySelectorAll('#rows [data-search]').forEach(node => node.classList.toggle('hidden', !node.dataset.search.toLowerCase().includes(query.toLowerCase()))); }
 

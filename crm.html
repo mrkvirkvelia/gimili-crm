@@ -162,6 +162,12 @@
     .settle-card .teacher-top{flex-wrap:wrap}.settle-card .teacher-top>.btn{margin-left:auto}
     .settle-remind{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff7e0;border:1px solid #f3d48a;border-radius:18px;padding:12px 14px}.settle-remind>div{min-width:0;flex:1 1 200px}.settle-remind b{display:block}.settle-remind small{color:#7a5a00;font-weight:600}
     .prepay-line{margin-top:10px;padding:10px 14px;border-radius:14px;background:#eef6ff;font-weight:700;font-size:14px;line-height:1.4}.prepay-line small{color:var(--muted)}
+    .section-tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:0 0 16px;padding:4px;border-radius:16px;background:#e6f0f7;width:max-content;max-width:100%}.section-tabs::-webkit-scrollbar{display:none}
+    .section-tabs button{flex:0 0 auto;min-height:40px;border:0;border-radius:12px;background:transparent;color:#526d80;padding:0 14px;font:inherit;font-size:14px;font-weight:800;white-space:nowrap;cursor:pointer}
+    .section-tabs button.active{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(18,62,139,.12)}
+    .drawer-section{grid-column:1/-1;min-height:0}.drawer-section small{display:block;margin-top:4px;font-size:12px;font-weight:600;color:var(--muted);line-height:1.35}
+    .side-sub{display:flex;flex-direction:column;gap:1px;margin:0 0 6px 34px;padding-left:10px;border-left:2px solid #e1eaf0}
+    .side-subitem{border:0;background:none;text-align:left;font:inherit;font-size:14px;font-weight:650;color:var(--muted);padding:7px 10px;border-radius:10px;cursor:pointer}.side-subitem:hover{background:#f2f7fb}.side-subitem.active{color:var(--blue);background:#eaf3ff}
   </style>
 </head>
 <body>
@@ -172,10 +178,10 @@
     <aside id="sidebar" class="sidebar" aria-label="განყოფილებები"></aside>
     <main id="view"></main>
     <nav class="nav" aria-label="მთავარი ნავიგაცია">
-      <button data-view="dashboard" onclick="go('dashboard')" aria-label="მთავარი"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>მთავარი</span></button>
-      <button data-view="children" onclick="go('children')" aria-label="ბავშვები"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-4 2.4-6 5.5-6s5 2 5.5 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15 14c3.4-.6 5.2 1.1 5.5 4"/></svg><span>ბავშვები</span></button>
+      <button data-section="home" onclick="openSection('home')" aria-label="მთავარი"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>მთავარი</span></button>
+      <button data-section="kids" onclick="openSection('kids')" aria-label="ბავშვები"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-4 2.4-6 5.5-6s5 2 5.5 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15 14c3.4-.6 5.2 1.1 5.5 4"/></svg><span>ბავშვები</span></button>
       <button class="nav-add" onclick="quickAdd()" aria-label="ჩანაწერის დამატება"><span class="add-orb"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>დამატება</span></button>
-      <button data-view="payments" onclick="go('payments')" aria-label="გადახდები"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M8 15h4"/></svg><span>გადახდები</span></button>
+      <button data-section="money" onclick="openSection('money')" aria-label="ფინანსები"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 10h18M8 15h4"/></svg><span>ფინანსები</span></button>
       <button data-nav="more" onclick="toggleDrawer(true)" aria-label="მენიუ"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>მენიუ</span></button>
     </nav>
   </div>
@@ -183,5 +189,5 @@
   <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-head"><h2 id="modalTitle"></h2><button class="close" onclick="requestCloseModal()" aria-label="დახურვა">×</button></div><form id="modalForm" class="form"></form></div></div>
   <div id="toast" class="toast hidden"></div>
 <script src="./config.js?v=20261030-5"></script>
-<script src="./crm.js?v=20261112-dayearn" defer></script>
+<script src="./crm.js?v=20261112-menu5" defer></script>
 </body></html>
