@@ -168,10 +168,21 @@ class CRMTest(unittest.TestCase):
         self.page.locator("button:has-text('მოხსნა')").first.click(); self.page.wait_for_timeout(300)
         self.assertNotIn('cx', self.js("get('children','kx').activityIds"))
 
+    def test_children_active_first(self):
+        self.open(extra={'children': [{'id': 'z0', 'name': 'ააა', 'active': False}]})
+        self.js("go('children')"); self.page.wait_for_timeout(100)
+        tabs = self.page.locator('#view .status-tabs button')
+        self.assertEqual([tabs.nth(i).inner_text().split()[0] for i in range(3)], ['აქტიური', 'არააქტიური', 'ყველა'])
+        self.assertIn('active', tabs.nth(0).get_attribute('class'), 'active children are shown by default')
+        self.assertNotIn('ააა', self.page.inner_text('#rows'))
+        self.js("setParticipantStatusFilter('all')"); self.page.wait_for_timeout(100)
+        self.assertEqual(self.js("filteredByParticipantStatus('children', data.children).at(-1).id"), 'z0', 'inactive children go to the bottom')
+        self.assertFalse(self.js("MENU.some(s => s[3].some(p => p[0] === 'sourceTable'))"), 'the old source table is gone from the menu')
+
     # ---------- menu: 5 sections with tabs ----------
     def test_menu_five_sections_with_tabs(self):
         old_menu = {'dashboard', 'schedule', 'children', 'parents', 'attendance', 'contacts', 'leads', 'clubs', 'staff',
-                    'payments', 'expenses', 'accounting', 'months', 'reports', 'analytics', 'tasks', 'sourceTable', 'settings'}
+                    'payments', 'expenses', 'accounting', 'months', 'reports', 'analytics', 'tasks', 'settings'}
         page = self.open(1366)
         self.assertEqual(self.js("MENU.length"), 5)
         self.assertEqual(set(self.js("MENU.flatMap(s => s[3].map(p => p[0]))")), old_menu, 'every screen of the old menu is still in the menu')

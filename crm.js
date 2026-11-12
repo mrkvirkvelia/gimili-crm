@@ -15,7 +15,7 @@ let expenseCategory = 'all';
 let paymentMonth = todayMonth();
 let calendarMonth = todayMonth();
 let calendarSelected = localDate();
-let participantStatusFilter = 'all';
+let participantStatusFilter = 'active';
 const expenseCategories = ['კომუნალური მომსახურება', 'საკანცელარიო ნივთები', 'ხელფასები', 'ქირა', 'რეკლამა', 'სასწავლო მასალები', 'კვება', 'რემონტი და აღჭურვილობა', 'გადასახადები და საკომისიოები', 'მასტერკლასის წამყვანი', 'სხვა'];
 const expenseCategoryAliases = {
   'Коммунальные услуги':'კომუნალური მომსახურება','Канцелярия':'საკანცელარიო ნივთები','Зарплаты':'ხელფასები',
@@ -84,10 +84,11 @@ const startedBy = (child, month) => { const from = monthKey(child?.activeFrom); 
 const circleStartedBy = (child, subject, month) => { const from = monthKey(child?.activityStart?.[subject?.id]); return !from || from <= month; };
 const activeLabel = (item, kind = '') => isActiveRecord(item, kind) ? 'აქტიური' : 'არააქტიური';
 const activePeople = (kind, rows = data[kind] || []) => rows.filter(item => isActiveRecord(item, kind));
-const filteredByParticipantStatus = (kind, rows) => participantStatusFilter === 'all' ? rows : rows.filter(item => isActiveRecord(item, kind) === (participantStatusFilter === 'active'));
+// "All" lists active records first, inactive ones at the bottom (each part keeps its own order).
+const filteredByParticipantStatus = (kind, rows) => participantStatusFilter === 'all' ? [...rows].sort((a, b) => Number(!isActiveRecord(a, kind)) - Number(!isActiveRecord(b, kind))) : rows.filter(item => isActiveRecord(item, kind) === (participantStatusFilter === 'active'));
 function participantStatusTabs(kind, rows) {
   const active = rows.filter(item => isActiveRecord(item, kind)).length;
-  return `<div class="status-tabs" role="group" aria-label="სტატუსის ფილტრი"><button class="${participantStatusFilter==='all'?'active':''}" onclick="setParticipantStatusFilter('all')">ყველა <b>${rows.length}</b></button><button class="${participantStatusFilter==='active'?'active':''}" onclick="setParticipantStatusFilter('active')">აქტიური <b>${active}</b></button><button class="${participantStatusFilter==='inactive'?'active':''}" onclick="setParticipantStatusFilter('inactive')">არააქტიური <b>${rows.length-active}</b></button></div>`;
+  return `<div class="status-tabs" role="group" aria-label="სტატუსის ფილტრი"><button class="${participantStatusFilter==='active'?'active':''}" onclick="setParticipantStatusFilter('active')">აქტიური <b>${active}</b></button><button class="${participantStatusFilter==='inactive'?'active':''}" onclick="setParticipantStatusFilter('inactive')">არააქტიური <b>${rows.length-active}</b></button><button class="${participantStatusFilter==='all'?'active':''}" onclick="setParticipantStatusFilter('all')">ყველა <b>${rows.length}</b></button></div>`;
 }
 function setParticipantStatusFilter(value) { participantStatusFilter = value; go(current); }
 async function toggleRecordActive(kind, id) {
@@ -1844,7 +1845,7 @@ function filterSourceRows(query) {
 }
 
 function settings() {
-  return `${head('პარამეტრები','წვდომა და მონაცემები')}<div class="grid-cards"><section class="mini-card"><h3>ჩანაწერებზე წვდომა</h3><p class="meta">${esc(signedInUser?.email||'')}. ბავშვებისა და კონტაქტების მონაცემები მხოლოდ ნებადართულ ანგარიშებს აქვს.</p><button type="button" onclick="logoutCRM()" class="btn secondary access-button">გასვლა</button></section><section class="mini-card"><h3>სამუშაო Google ცხრილი</h3><p class="meta">ბავშვები, საგნები, მასწავლებლები, გადახდები და ხარჯები ცალკე ფურცლებზეა განაწილებული.</p><a class="btn" href="https://docs.google.com/spreadsheets/d/1qW0gh9_mcOFoA9zt_ON2f9qe3qyBtDJZncI0j-wECPw/edit" target="_blank" rel="noopener noreferrer">ცხრილის გახსნა ↗</a><p class="meta">CRM ცვლილებებს პირდაპირ ამ ცხრილში ინახავს.</p></section><section class="mini-card"><h3>საწყისი ცხრილი</h3><p class="meta">თითოეული შევსებული სტრიქონი და A–L უჯრები ცალ-ცალკე ინახება. დაზუსტებული ველები ბავშვების ბარათებშია გადატანილი.</p><button class="btn" onclick="importSheet()">წყაროს განახლება</button><p class="meta">განახლება ბავშვების ბარათებს არ გააორმაგებს და ხელით შეტანილ ცვლილებებს არ წაშლის.</p></section><section class="mini-card"><h3>საერთო საცავი</h3><p class="meta">ცვლილებები Google ცხრილში ინახება და შესვლის შემდეგ სხვადასხვა მოწყობილობაზე ჩანს.</p></section></div>`;
+  return `${head('პარამეტრები','წვდომა და მონაცემები')}<div class="grid-cards"><section class="mini-card"><h3>ჩანაწერებზე წვდომა</h3><p class="meta">${esc(signedInUser?.email||'')}. ბავშვებისა და კონტაქტების მონაცემები მხოლოდ ნებადართულ ანგარიშებს აქვს.</p><button type="button" onclick="logoutCRM()" class="btn secondary access-button">გასვლა</button></section><section class="mini-card"><h3>სამუშაო Google ცხრილი</h3><p class="meta">ბავშვები, საგნები, მასწავლებლები, გადახდები და ხარჯები ცალკე ფურცლებზეა განაწილებული.</p><a class="btn" href="https://docs.google.com/spreadsheets/d/1qW0gh9_mcOFoA9zt_ON2f9qe3qyBtDJZncI0j-wECPw/edit" target="_blank" rel="noopener noreferrer">ცხრილის გახსნა ↗</a><p class="meta">CRM ცვლილებებს პირდაპირ ამ ცხრილში ინახავს.</p></section><section class="mini-card"><h3>საერთო საცავი</h3><p class="meta">ცვლილებები Google ცხრილში ინახება და შესვლის შემდეგ სხვადასხვა მოწყობილობაზე ჩანს.</p></section></div>`;
 }
 
 // ---------- Month closing ----------
@@ -2217,7 +2218,7 @@ const MENU = [
   ['kids', '☺', 'ბავშვები', [['children','ბავშვები'],['parents','მშობლები'],['contacts','კონტაქტები'],['leads','განაცხადები']]],
   ['calendar', '▦', 'კალენდარი', [['schedule','კალენდარი'],['attendance','დასწრება']]],
   ['money', '₾', 'ფინანსები', [['payments','გადახდები'],['expenses','ხარჯები'],['accounting','ბუღალტერია'],['months','თვის დახურვა'],['reports','სტატისტიკა'],['analytics','ანალიტიკა']]],
-  ['center', '✦', 'ცენტრი', [['clubs','წრეები'],['staff','თანამშრომლები'],['tasks','ამოცანები'],['settings','პარამეტრები'],['sourceTable','საწყისი ცხრილი']]],
+  ['center', '✦', 'ცენტრი', [['clubs','წრეები'],['staff','თანამშრომლები'],['tasks','ამოცანები'],['settings','პარამეტრები']]],
 ];
 // Detail pages belong to the section of their list, but show no tabs (they have their own way back).
 const DETAIL_PARENT = { childProfile: 'children', staffProfile: 'staff', circleProfile: 'clubs', groups: 'clubs' };
