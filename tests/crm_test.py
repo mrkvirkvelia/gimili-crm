@@ -179,6 +179,16 @@ class CRMTest(unittest.TestCase):
         self.assertEqual(self.js("filteredByParticipantStatus('children', data.children).at(-1).id"), 'z0', 'inactive children go to the bottom')
         self.assertFalse(self.js("MENU.some(s => s[3].some(p => p[0] === 'sourceTable'))"), 'the old source table is gone from the menu')
 
+    def test_parents_with_debt_on_top(self):
+        # "ბბბ" comes later by name but owes money (ანა, k1: arithmetic for November), so it goes first
+        self.open(extra={'parents': [{'id': 'pa', 'name': 'ააა მშობელი'}, {'id': 'pb', 'name': 'ბბბ მშობელი'}]})
+        self.js("get('children','k1').parentIds=['pb']; get('children','k3').parentIds=['pa']")
+        self.assertGreater(self.js("familyDebt('pb').total"), 0)
+        self.assertEqual(self.js("familyDebt('pa').total"), 0)
+        self.js("go('parents')"); self.page.wait_for_timeout(100)
+        text = self.page.inner_text('#view')
+        self.assertLess(text.index('ბბბ მშობელი'), text.index('ააა მშობელი'))
+
     # ---------- menu: 5 sections with tabs ----------
     def test_menu_five_sections_with_tabs(self):
         old_menu = {'dashboard', 'schedule', 'children', 'parents', 'attendance', 'contacts', 'leads', 'clubs', 'staff',
